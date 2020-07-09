@@ -138,7 +138,7 @@ def ntfsdump():
         help="NTFS volume number(default: 2, because volume1 is recovery partition).",
     )
     parser.add_argument(
-        "--output_path",
+        "--output-path",
         "-o",
         type=Path,
         default=Path(".").resolve(),

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ntfsdump"
-version = "1.0.0"
+version = "1.0.1"
 description = "A tool for exporting any files from an NTFS volume on a Raw Image file."
 authors = ["sumeshi <j15322sn@gmail.com>"]
 license = "MIT"
