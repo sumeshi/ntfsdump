@@ -10,7 +10,7 @@ A tool for exporting any files from an NTFS volume on a Raw Image file.
 ## Usage
 
 ```bash
-$ ntfsdump <dump_target_winpath> --output-path ./out ./path/to/your/imagefile.raw
+$ ntfsdump <dump_target_winpath> --output-path <ouput_path> ./path/to/your/imagefile.raw
 ```
 
 ### Example
@@ -21,7 +21,20 @@ In the case of a directory, it dumps the lower files recursively.
 $ ntfsdump /Windows/System32/winevt/Logs -o ./dump ./path/to/your/imagefile.raw
 ```
 
-### Required Dependencies
+### Options
+```
+--volume-num, -n:
+    NTFS volume number(default 2, because volume1 is recovery partition).
+
+--output-path, -o:
+    Output directory or file path.
+
+    If the target Path is a directory, the directory specified by --output-path is created and the target files is dump under it.
+
+    Otherwise, the file is dumped with the file name specified in the --output-path.)
+```
+
+### Required Software
 This software requires `The Sleuth Kit`.
 
 https://www.sleuthkit.org/sleuthkit/
