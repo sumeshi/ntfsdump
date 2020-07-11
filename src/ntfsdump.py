@@ -58,7 +58,7 @@ class NtfsVolume(object):
                 Path(destination_path).mkdir(parents=True, exist_ok=True)
                 self.__write_file(Path(destination_path, file.filename), file.address)
 
-    def __find_baseaddress(self, path_list: List[str], address: str = "") -> str:
+    def find_baseaddress(self, path_list: List[str], address: str = "") -> str:
         if not path_list:
             return address
 
@@ -69,13 +69,13 @@ class NtfsVolume(object):
         ]
 
         if found_contents:
-            return self.__find_baseaddress(path_list[1:], found_contents[0].address)
+            return self.find_baseaddress(path_list[1:], found_contents[0].address)
         else:
             raise Exception("File or Directory not Found")
 
     def dump_files(self, query: str, destination_path: Path, address: str = "") -> None:
         queries = [q for q in query.split("/") if q]
-        base_address = self.__find_baseaddress(queries)
+        base_address = self.find_baseaddress(queries)
 
         try:
             # is_dir
