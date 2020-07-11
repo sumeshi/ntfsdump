@@ -3,7 +3,7 @@ import shutil
 import argparse
 import subprocess
 from pathlib import Path
-from typing import List
+from typing import List, Generator
 
 
 class NtfsFile(object):
@@ -58,31 +58,32 @@ class NtfsVolume(object):
                 Path(destination_path).mkdir(parents=True, exist_ok=True)
                 self.__write_file(Path(destination_path, file.filename), file.address)
 
+    def __find_baseaddress(self, path_list: List[str], address: str = "") -> str:
+        if not path_list:
+            return address
+
+        found_contents = [
+            content
+            for content in self.__ls(address=address)
+            if content.filename == path_list[0]
+        ]
+
+        if found_contents:
+            return self.__find_baseaddress(path_list[1:], found_contents[0].address)
+        else:
+            raise Exception("File or Directory not Found")
+
     def dump_files(self, query: str, destination_path: Path, address: str = "") -> None:
         queries = [q for q in query.split("/") if q]
-        for index, path in enumerate(queries):
-            found_contents = [
-                content
-                for content in self.__ls(address=address)
-                if content.filename == path
-            ]
-            if found_contents:
-                if index == (len(queries) - 1):
-                    if found_contents[0].is_file:
-                        self.__write_file(destination_path, found_contents[0].address)
-                        break
-                    else:
-                        self.__recursive_dump(
-                            destination_path, found_contents[0].address
-                        )
-                        break
-                else:
-                    self.dump_files(
-                        "/".join(queries[1:]),
-                        destination_path,
-                        found_contents[0].address,
-                    )
-                    break
+        base_address = self.__find_baseaddress(queries)
+
+        try:
+            # is_dir
+            self.__ls(address=base_address)
+            self.__recursive_dump(destination_path, base_address)
+        except Exception:
+            # is_file
+            self.__write_file(destination_path, base_address)
 
 
 class ImageFile(object):
