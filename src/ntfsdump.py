@@ -1,4 +1,5 @@
 import re
+import sys
 import shutil
 import argparse
 import subprocess
@@ -34,13 +35,17 @@ class NtfsVolume(object):
             for data in data_list
         ]
 
-    def __write_file(self, file_path: Path, address: str):
-        print(f"write: {file_path}")
+    def __write_file(self, file_path: Path, address: str, filename: str = ''):
         file_content = subprocess.check_output(
             f"icat -i raw -f ntfs -o {self.start_byte} {self.path} {address}",
             shell=True,
         )
-        file_path.write_bytes(file_content)
+        try:
+            file_path.write_bytes(file_content)
+            print(f"write: {file_path}")
+        except IsADirectoryError:
+            Path(file_path / filename).write_bytes(file_content)
+            print(f"write: {Path(file_path / filename)}")
 
     def __recursive_dump(self, destination_path: Path, address: str):
         for directory in self.__ls(option="-D", address=address):
@@ -75,15 +80,19 @@ class NtfsVolume(object):
 
     def dump_files(self, query: str, destination_path: Path, address: str = "") -> None:
         queries = [q for q in query.split("/") if q]
-        base_address = self.find_baseaddress(queries)
-
         try:
-            # is_dir
-            self.__ls(address=base_address)
-            self.__recursive_dump(destination_path, base_address)
-        except Exception:
-            # is_file
-            self.__write_file(destination_path, base_address)
+            base_address = self.find_baseaddress(queries)
+
+            try:
+                # is_dir
+                self.__ls(address=base_address)
+                self.__recursive_dump(destination_path, base_address)
+            except Exception:
+                # is_file
+                self.__write_file(destination_path, base_address, queries[-1])
+
+        except:
+            print(f'file not exist: {query}')
 
 
 class ImageFile(object):
@@ -123,13 +132,17 @@ def ntfsdump():
             "The Sleuth Kit is not installed. Please execute the command `brew install sleuthkit`"
         )
         exit()
-
+    
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "target_query",
-        type=str,
-        help="Target File Windows Path (ex. /Users/user/Desktop/target.txt).",
-    )
+
+    if sys.stdin.isatty():
+        parser.add_argument(
+            "target_queries",
+            nargs="+",
+            type=str,
+            help="Target File Windows Path (ex. /Users/user/Desktop/target.txt).",
+        )
+
     parser.add_argument("imagefile_path", type=Path, help="raw image file")
     parser.add_argument(
         "--volume-num",
@@ -147,10 +160,13 @@ def ntfsdump():
     )
     args = parser.parse_args()
 
+    target_queries = [i.strip() for i in sys.stdin] if not sys.stdin.isatty() else args.target_queries
+
     i = ImageFile(args.imagefile_path)
-    i.volumes[args.volume_num - 1].dump_files(
-        args.target_query, args.output_path.resolve()
-    )
+    for target_query in target_queries:
+        i.volumes[args.volume_num - 1].dump_files(
+            target_query, args.output_path.resolve()
+        )
 
 
 if __name__ == "__main__":
