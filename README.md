@@ -21,6 +21,15 @@ In the case of a directory, it dumps the lower files recursively.
 $ ntfsdump /Windows/System32/winevt/Logs -o ./dump ./path/to/your/imagefile.raw
 ```
 
+
+#### When use with [ntfsfind](https://github.com/sumeshi/ntfsfind)
+
+https://github.com/sumeshi/ntfsfind
+
+```.bash
+$ ntfsfind '.*\.evtx' ./path/to/your/imagefile.raw | ntfsdump ./path/to/your/imagefile.raw
+```
+
 ### Options
 ```
 --volume-num, -n:
