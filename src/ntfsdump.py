@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Generator
 
+import pytsk3
 
 class NtfsFile(object):
     def __init__(self, filetype: str, address: str, filename: str):
@@ -18,101 +19,94 @@ class NtfsFile(object):
 
 
 class NtfsVolume(object):
-    def __init__(self, path: Path, description: str, start_byte: int, end_byte: int):
+
+    def __init__(self, path: Path, addr: int, description: str, start_byte: int, end_byte: int, fs_info: pytsk3.FS_Info):
         self.path = path
+        self.addr = addr
         self.description = description
         self.start_byte = start_byte
         self.end_byte = end_byte
+        self.fs_info = fs_info
+    
+    def __read_file(self, query: str) -> bytes:
 
-    def __ls(self, option: str = "", address: str = "") -> List[NtfsFile]:
-        ls = subprocess.check_output(
-            f"fls -i raw -f ntfs -o {self.start_byte} {option} {self.path} {address}",
-            shell=True,
-        )
-        data_list = [line.split() for line in grepline(ls, "")]
-        return [
-            NtfsFile(filetype=data[0], address=data[1], filename=data[2],)
-            for data in data_list
-        ]
+        f = self.fs_info.open(query)
 
-    def __write_file(self, file_path: Path, address: str, filename: str = ''):
-        file_content = subprocess.check_output(
-            f"icat -i raw -f ntfs -o {self.start_byte} {self.path} {address}",
-            shell=True,
-        )
+        offset = 0
+        size = f.info.meta.size
+        BUFF_SIZE = 1024 * 1024
+
+        result = bytes()
+
+        while offset < size:
+            available_to_read = min(BUFF_SIZE, size - offset)
+            data = f.read_random(offset, available_to_read)
+            if not data: break
+
+            offset += len(data)
+            result += data
+        
+        return result
+    
+    def __write_file(self, destination_path: Path, content: bytes, filename: str) -> None:
+        # destination path is a file
         try:
-            file_path.write_bytes(file_content)
-            print(f"write: {file_path}")
+            destination_path.write_bytes(content)
+            print(f"dumped: {destination_path}")
+
+        # destination path is a directory
         except IsADirectoryError:
-            Path(file_path / filename).write_bytes(file_content)
-            print(f"write: {Path(file_path / filename)}")
+            Path(destination_path / filename).write_bytes(content)
+            print(f"dumped: {Path(destination_path / filename)}")
 
-    def __recursive_dump(self, destination_path: Path, address: str):
-        for directory in self.__ls(option="-D", address=address):
-            Path(destination_path, directory.filename).mkdir(
-                parents=True, exist_ok=True
-            )
-            self.__recursive_dump(
-                Path(destination_path, directory.filename), directory.address
-            )
+    def dump_files(self, query: str, destination_path: Path) -> None:
 
-        for file in self.__ls(option="-F", address=address):
-            try:
-                self.__write_file(Path(destination_path, file.filename), file.address)
-            except FileNotFoundError:
-                Path(destination_path).mkdir(parents=True, exist_ok=True)
-                self.__write_file(Path(destination_path, file.filename), file.address)
+        filename: str = Path(query).name
+        content: bytes = self.__read_file(query)
 
-    def find_baseaddress(self, path_list: List[str], address: str = "") -> str:
-        if not path_list:
-            return address
-
-        found_contents = [
-            content
-            for content in self.__ls(address=address)
-            if content.filename == path_list[0]
-        ]
-
-        if found_contents:
-            return self.find_baseaddress(path_list[1:], found_contents[0].address)
-        else:
-            raise Exception("File or Directory not Found")
-
-    def dump_files(self, query: str, destination_path: Path, address: str = "") -> None:
-        queries = [q for q in query.split("/") if q]
-        try:
-            base_address = self.find_baseaddress(queries)
-
-            try:
-                # is_dir
-                self.__ls(address=base_address)
-                self.__recursive_dump(destination_path, base_address)
-            except Exception:
-                # is_file
-                self.__write_file(destination_path, base_address, queries[-1])
-
-        except:
-            print(f'file not exist: {query}')
+        self.__write_file(destination_path, content, filename)
 
 
 class ImageFile(object):
-    def __init__(self, path: Path):
-        self.path = path
-        self.volumes = self.__analyze_partitions()
+    def __init__(self, path: Path, volume_num: int):
+        self.path: Path = path
+        self.block_size: int = 512
+        self.volumes: List[NtfsVolume] = self.__analyze_partitions()
+        self.main_volume: NtfsVolume = self.__auto_detect_main_partition(volume_num)
 
     def __analyze_partitions(self) -> List[NtfsVolume]:
-        volumes = subprocess.check_output(f"mmls {self.path}", shell=True)
-        pattern = re.compile(r"^\d\d\d:.*")
-        data_list = [line.split() for line in grepline(volumes, "NTFS", pattern)]
+        img_info = pytsk3.Img_Info(str(self.path))
+        volumes = pytsk3.Volume_Info(img_info)
+
+        self.block_size = volumes.info.block_size
+
         return [
             NtfsVolume(
                 path=self.path,
-                description=" ".join(data[5:]),
-                start_byte=int(data[2]),
-                end_byte=int(data[3]),
-            )
-            for data in data_list
+                addr=volume.addr,
+                description=volume.desc.decode('utf-8'),
+                start_byte=volume.start,
+                end_byte=volume.start+volume.len-1,
+                fs_info=pytsk3.FS_Info(img_info, self.block_size * volume.start, pytsk3.TSK_FS_TYPE_NTFS)
+            ) for volume in volumes if volume.desc.decode('utf-8').startswith('NTFS')
         ]
+    
+    def __auto_detect_main_partition(self, volume_num: int) -> NtfsVolume:
+        if volume_num:
+            # user specify addr
+            return [v for v in self.volumes if v.addr == volume_num][0]
+
+        elif len(self.volumes) == 1:
+            # windows xp ~ vista
+            return self.volumes[0]
+
+        elif len(self.volumes) == 2:
+            # windows 7 ~
+            # bacause first ntfs partition is recovery partition.
+            return self.volumes[-1]
+
+        else:
+            return self.volumes[-1]
 
 
 def grepline(
@@ -126,15 +120,9 @@ def grepline(
 
 
 def ntfsdump():
-
-    if not shutil.which("mmls"):
-        print(
-            "The Sleuth Kit is not installed. Please execute the command `brew install sleuthkit`"
-        )
-        exit()
-    
     parser = argparse.ArgumentParser()
 
+    # If no queries have been received from the pipeline.
     if sys.stdin.isatty():
         parser.add_argument(
             "target_queries",
@@ -148,7 +136,7 @@ def ntfsdump():
         "--volume-num",
         "-n",
         type=int,
-        default=2,
+        default=None,
         help="NTFS volume number(default: 2, because volume1 is recovery partition).",
     )
     parser.add_argument(
@@ -160,14 +148,15 @@ def ntfsdump():
     )
     args = parser.parse_args()
 
+    # pipeline stdin or args
     target_queries = [i.strip() for i in sys.stdin] if not sys.stdin.isatty() else args.target_queries
 
-    i = ImageFile(args.imagefile_path)
+    # dump files
+    image = ImageFile(args.imagefile_path, args.volume_num)
     for target_query in target_queries:
-        i.volumes[args.volume_num - 1].dump_files(
+        image.main_volume.dump_files(
             target_query, args.output_path.resolve()
         )
-
 
 if __name__ == "__main__":
     ntfsdump()

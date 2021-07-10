@@ -43,18 +43,9 @@ $ ntfsfind '.*\.evtx' ./path/to/your/imagefile.raw | ntfsdump ./path/to/your/ima
     Otherwise, the file is dumped with the file name specified in the --output-path.)
 ```
 
-### Required Software
-This software requires `The Sleuth Kit`.
-
-https://www.sleuthkit.org/sleuthkit/
-
-```bash
-$ brew install sleuthkit
-```
-
 ## Installation
 
-### via pip
+### via PyPI
 
 ```
 $ pip install ntfsdump
