@@ -61,4 +61,4 @@ Please report issues and feature requests. :sushi: :sushi: :sushi:
 
 ntfsdump is released under the [MIT](https://github.com/sumeshi/ntfsdump/blob/master/LICENSE) License.
 
-Powered by [The Sleuth Kit](https://www.sleuthkit.org/sleuthkit/).  
+Powered by [pytsk3](https://github.com/py4n6/pytsk).  
