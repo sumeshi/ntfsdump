@@ -4,6 +4,8 @@
 [![PyPI version](https://badge.fury.io/py/ntfsdump.svg)](https://badge.fury.io/py/ntfsdump)
 [![Python Versions](https://img.shields.io/pypi/pyversions/ntfsdump.svg)](https://pypi.org/project/ntfsdump/)
 
+![ntfsdump logo](https://gist.githubusercontent.com/sumeshi/c2f430d352ae763273faadf9616a29e5/raw/baa85b045e0043914218cf9c0e1d1722e1e7524b/ntfsdump.svg)
+
 A tool for exporting any files from an NTFS volume on a Raw Image file.
 
 
@@ -33,7 +35,7 @@ $ ntfsfind '.*\.evtx' ./path/to/your/imagefile.raw | ntfsdump ./path/to/your/ima
 ### Options
 ```
 --volume-num, -n:
-    NTFS volume number(default 2, because volume1 is recovery partition).
+    NTFS volume number(default: autodetect).
 
 --output-path, -o:
     Output directory or file path.
