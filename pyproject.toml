@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ntfsdump"
-version = "1.1.0"
+version = "2.0.0"
 description = "A tool for exporting any files from an NTFS volume on a Raw Image file."
 authors = ["sumeshi <j15322sn@gmail.com>"]
 license = "MIT"
@@ -16,6 +16,7 @@ ntfsdump = 'ntfsdump:ntfsdump'
 
 [tool.poetry.dependencies]
 python = "^3.7"
+pytsk3 = "^20210419"
 
 [tool.poetry.dev-dependencies]
 black = "^19.10b0"
