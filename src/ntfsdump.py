@@ -160,7 +160,7 @@ def ntfsdump():
         "-n",
         type=int,
         default=None,
-        help="NTFS volume number(default: 2, because volume1 is recovery partition).",
+        help="NTFS volume number(default: autodetect).",
     )
     parser.add_argument(
         "--output-path",
