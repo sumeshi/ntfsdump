@@ -28,6 +28,21 @@ class NtfsVolume(object):
         self.end_byte = end_byte
         self.fs_info = fs_info
     
+    def __is_dir(self, query: str) -> bool:
+        f = self.fs_info.open(query)
+        return True if f.info.name.type == pytsk3.TSK_FS_NAME_TYPE_DIR else False
+
+    def __is_file(self, query: str) -> bool:
+        f = self.fs_info.open(query)
+        return True if f.info.name.type == pytsk3.TSK_FS_NAME_TYPE_REG else False
+    
+    def __list_artifacts(self, query: str) -> List[str]:
+        # return artifacts without current and parent dir
+        return [
+            a.info.name.name.decode('utf-8') for a in self.fs_info.open_dir(query) 
+            if not a.info.name.name.decode('utf-8') in ['.', '..']
+        ]
+    
     def __read_file(self, query: str) -> bytes:
 
         f = self.fs_info.open(query)
@@ -61,10 +76,28 @@ class NtfsVolume(object):
 
     def dump_files(self, query: str, destination_path: Path) -> None:
 
-        filename: str = Path(query).name
-        content: bytes = self.__read_file(query)
+        if self.__is_dir(query):
+            for artifact in self.__list_artifacts(query):
+                newquery = str(Path(query) / Path(artifact))
+                newdestination_path = destination_path / Path(query).name
 
-        self.__write_file(destination_path, content, filename)
+                # create directory
+                newdestination_path.mkdir(parents=True, exist_ok=True)
+
+                # recursive dump
+                self.dump_files(query=newquery, destination_path=newdestination_path)
+
+        elif self.__is_file(query):
+            filename = Path(query).name
+            content = self.__read_file(query)
+            self.__write_file(destination_path, content, filename)
+        else:
+            try:
+                filename = Path(query).name
+                content = self.__read_file(query)
+                self.__write_file(destination_path, content, filename)
+            except:
+                print(f"dump error: {query}")
 
 
 class ImageFile(object):
@@ -107,16 +140,6 @@ class ImageFile(object):
 
         else:
             return self.volumes[-1]
-
-
-def grepline(
-    msg: bytes, key: str, validate_pattern: re.Pattern = re.compile(r".*")
-) -> List[str]:
-    return [
-        line
-        for line in msg.decode("utf8").splitlines()
-        if key in line and re.match(validate_pattern, line)
-    ]
 
 
 def ntfsdump():
