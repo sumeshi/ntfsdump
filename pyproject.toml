@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ntfsdump"
-version = "2.0.0"
+version = "2.0.1"
 description = "A tool for exporting any files from an NTFS volume on a Raw Image file."
 authors = ["sumeshi <j15322sn@gmail.com>"]
 license = "MIT"
@@ -12,7 +12,7 @@ homepage = "https://github.com/sumeshi/ntfsdump"
 keywords = ['Windows']
 
 [tool.poetry.scripts]
-ntfsdump = 'ntfsdump:ntfsdump'
+ntfsdump = 'ntfsdump:entry_point'
 
 [tool.poetry.dependencies]
 python = "^3.7"

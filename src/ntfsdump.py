@@ -4,7 +4,7 @@ import shutil
 import argparse
 import subprocess
 from pathlib import Path
-from typing import List, Generator
+from typing import List, Generator, Optional
 
 import pytsk3
 
@@ -101,7 +101,7 @@ class NtfsVolume(object):
 
 
 class ImageFile(object):
-    def __init__(self, path: Path, volume_num: int):
+    def __init__(self, path: Path, volume_num: Optional[int]):
         self.path: Path = path
         self.block_size: int = 512
         self.volumes: List[NtfsVolume] = self.__analyze_partitions()
@@ -124,7 +124,7 @@ class ImageFile(object):
             ) for volume in volumes if volume.desc.decode('utf-8').startswith('NTFS')
         ]
     
-    def __auto_detect_main_partition(self, volume_num: int) -> NtfsVolume:
+    def __auto_detect_main_partition(self, volume_num: Optional[int]) -> NtfsVolume:
         if volume_num:
             # user specify addr
             return [v for v in self.volumes if v.addr == volume_num][0]
@@ -142,7 +142,15 @@ class ImageFile(object):
             return self.volumes[-1]
 
 
-def ntfsdump():
+def ntfsdump(imagefile_path: str, output_path: str, target_queries: List[str], volume_num: Optional[int] = None):
+    # dump files
+    image = ImageFile(Path(imagefile_path), volume_num)
+    for target_query in target_queries:
+        image.main_volume.dump_files(
+            target_query, Path(output_path).resolve()
+        )
+    
+def entry_point():
     parser = argparse.ArgumentParser()
 
     # If no queries have been received from the pipeline.
@@ -154,7 +162,7 @@ def ntfsdump():
             help="Target File Windows Path (ex. /Users/user/Desktop/target.txt).",
         )
 
-    parser.add_argument("imagefile_path", type=Path, help="raw image file")
+    parser.add_argument("imagefile_path", type=str, help="raw image file")
     parser.add_argument(
         "--volume-num",
         "-n",
@@ -165,21 +173,22 @@ def ntfsdump():
     parser.add_argument(
         "--output-path",
         "-o",
-        type=Path,
-        default=Path(".").resolve(),
-        help="Output directory or file path.",
+        type=str,
+        default=".",
+        help="Output directory or file path(default: current directory \'.\' ).",
     )
     args = parser.parse_args()
 
     # pipeline stdin or args
     target_queries = [i.strip() for i in sys.stdin] if not sys.stdin.isatty() else args.target_queries
 
-    # dump files
-    image = ImageFile(args.imagefile_path, args.volume_num)
-    for target_query in target_queries:
-        image.main_volume.dump_files(
-            target_query, args.output_path.resolve()
-        )
+    ntfsdump(
+        imagefile_path=args.imagefile_path,
+        output_path=args.output_path,
+        target_queries=target_queries,
+        volume_num=args.volume_num
+    )
+
 
 if __name__ == "__main__":
-    ntfsdump()
+    entry_point()

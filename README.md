@@ -16,6 +16,22 @@ A tool for exporting any files from an NTFS volume on a Raw Image file.
 $ ntfsdump <dump_target_winpath> --output-path <ouput_path> ./path/to/your/imagefile.raw
 ```
 
+```python
+from ntfsfind import ntfsfind
+
+# imagefile_path: str
+# output_path: str
+# target_queries: List[str]
+# volume_num: Optional[int] = None
+
+ntfsdump(
+    imagefile_path='./path/to/your/imagefile.raw',
+    output_path='./path/to/output/directory',
+    target_queries=['/Windows/System32/winevt/Logs'],
+    volume_num=2
+)
+```
+
 ### Example
 The target path can be either alone or in a directory.
 In the case of a directory, it dumps the lower files recursively.
