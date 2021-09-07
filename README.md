@@ -17,7 +17,7 @@ $ ntfsdump <dump_target_winpath> --output-path <ouput_path> ./path/to/your/image
 ```
 
 ```python
-from ntfsfind import ntfsfind
+from ntfsdump import ntfsdump
 
 # imagefile_path: str
 # output_path: str
