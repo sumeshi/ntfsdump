@@ -3,6 +3,7 @@
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 [![PyPI version](https://badge.fury.io/py/ntfsdump.svg)](https://badge.fury.io/py/ntfsdump)
 [![Python Versions](https://img.shields.io/pypi/pyversions/ntfsdump.svg)](https://pypi.org/project/ntfsdump/)
+[![DockerHub Status](https://shields.io/docker/cloud/build/sumeshi/ntfsdump)](https://hub.docker.com/r/sumeshi/ntfsdump)
 
 ![ntfsdump logo](https://gist.githubusercontent.com/sumeshi/c2f430d352ae763273faadf9616a29e5/raw/baa85b045e0043914218cf9c0e1d1722e1e7524b/ntfsdump.svg)
 
@@ -13,6 +14,22 @@ A tool for exporting any files from an NTFS volume on a Raw Image file.
 
 ```bash
 $ ntfsdump <dump_target_winpath> --output-path <ouput_path> ./path/to/your/imagefile.raw
+```
+
+```python
+from ntfsdump import ntfsdump
+
+# imagefile_path: str
+# output_path: str
+# target_queries: List[str]
+# volume_num: Optional[int] = None
+
+ntfsdump(
+    imagefile_path='./path/to/your/imagefile.raw',
+    output_path='./path/to/output/directory',
+    target_queries=['/Windows/System32/winevt/Logs'],
+    volume_num=2
+)
 ```
 
 ### Example
@@ -53,6 +70,16 @@ $ ntfsfind '.*\.evtx' ./path/to/your/imagefile.raw | ntfsdump ./path/to/your/ima
 $ pip install ntfsdump
 ```
 
+## Run with Docker
+https://hub.docker.com/r/sumeshi/ntfsdump
+
+
+```bash
+$ docker run -t --rm -v $(pwd):/app/work sumeshi/ntfsdump:latest '/$MFT' /app/work/sample.raw
+```
+
+## Contributing
+
 The source code for ntfsdump is hosted at GitHub, and you may download, fork, and review it from this repository(https://github.com/sumeshi/ntfsdump).
 
 Please report issues and feature requests. :sushi: :sushi: :sushi:
@@ -61,4 +88,4 @@ Please report issues and feature requests. :sushi: :sushi: :sushi:
 
 ntfsdump is released under the [MIT](https://github.com/sumeshi/ntfsdump/blob/master/LICENSE) License.
 
-Powered by [The Sleuth Kit](https://www.sleuthkit.org/sleuthkit/).  
+Powered by [pytsk3](https://github.com/py4n6/pytsk).  
