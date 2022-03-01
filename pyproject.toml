@@ -2,7 +2,7 @@
 name = "ntfsdump"
 version = "2.1.0"
 description = "A tool for exporting any files from an NTFS volume on a Raw Image file."
-authors = ["sumeshi <j15322sn@gmail.com>"]
+authors = ["sumeshi <sum3sh1@protonmail.com>"]
 license = "MIT"
 readme = "README.md"
 
