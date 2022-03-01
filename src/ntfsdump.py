@@ -146,6 +146,10 @@ def ntfsdump(imagefile_path: str, output_path: str, target_queries: List[str], v
         image.main_volume.dump_files(
             target_query, Path(output_path).resolve()
         )
+
+def show_version():
+    from importlib.metadata import version
+    return version('ntfsdump')
     
 def entry_point():
     parser = argparse.ArgumentParser()
@@ -174,6 +178,7 @@ def entry_point():
         default=".",
         help="Output directory or file path(default: current directory \'.\' ).",
     )
+    parser.add_argument('-v', '--version', action='version', version=show_version(), help='Show version and exit')
     args = parser.parse_args()
 
     # pipeline stdin or args
