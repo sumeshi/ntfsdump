@@ -60,7 +60,34 @@ class NtfsVolume(object):
         
         return result
     
-    def __write_file(self, destination_path: Path, content: bytes, filename: str) -> None:
+    def __read_alternate_data_stream(self, query: str, ads: str) -> Optional[bytes]:
+        query = query.replace('\\', '/')
+        f = self.fs_info.open(query)
+
+        OFFSET = 0
+        BUFF_SIZE = 1024 * 1024
+
+        ads_attribute = None
+        for attribute in f:
+            if attribute.info.name == ads.encode('utf-8'):
+                ads_attribute = attribute
+                break
+        
+        if ads_attribute:
+            result = bytes()
+            ADS_SIZE = ads_attribute.info.size
+
+            while OFFSET < ADS_SIZE:
+                available_to_read = min(BUFF_SIZE, ADS_SIZE - OFFSET)
+                data = f.read_random(OFFSET, available_to_read, ads_attribute.info.type, ads_attribute.info.id)
+                if not data: break
+                OFFSET += len(data)
+                result += data
+            return result
+        
+        return None
+    
+    def __write_file(self, destination_path: Path, content: Optional[bytes], filename: str) -> None:
         # destination path is a file
         try:
             destination_path.write_bytes(content)
@@ -72,6 +99,7 @@ class NtfsVolume(object):
             print(f"dumped: {Path(destination_path / filename)}")
 
     def dump_files(self, query: str, destination_path: Path) -> None:
+        query = query.replace('\\', '/')
 
         if self.__is_dir(query):
             for artifact in self.__list_artifacts(query):
@@ -86,14 +114,38 @@ class NtfsVolume(object):
 
         elif self.__is_file(query):
             filename = Path(query).name
-            content = self.__read_file(query)
-            self.__write_file(destination_path, content, filename)
+            content = None
+
+            # Alternate Data Stream
+            if ':' in filename:
+                filepath = query.split(':')[0]
+                ads = query.split(':')[1]
+                content = self.__read_alternate_data_stream(filepath, ads)
+            else:
+                content = self.__read_file(query)
+            
+            if destination_path.name == filename:
+                self.__write_file(destination_path, content, filename)
+            else:
+                destination_path = destination_path / filename
+                self.__write_file(destination_path, content, filename)
+        
+        elif query.endswith('.*'):
+            parent_dir = str(Path(query.replace('.*', '')).parent).replace('\\', '/')
+            file_prefix = Path(query.replace('.*', '')).name
+
+            files = [artifact for artifact in self.__list_artifacts(parent_dir) if artifact.startswith(file_prefix)]
+            for file in files:
+                newquery = str(Path(parent_dir) / Path(file))
+                self.dump_files(query=newquery, destination_path=destination_path.parent)
+
         else:
             try:
                 filename = Path(query).name
                 content = self.__read_file(query)
                 self.__write_file(destination_path, content, filename)
-            except:
+            except Exception as e:
+                print(e)
                 print(f"dump error: {query}")
 
 
