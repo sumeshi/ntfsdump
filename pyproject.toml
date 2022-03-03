@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "ntfsdump"
-version = "2.0.1"
+version = "2.1.0"
 description = "A tool for exporting any files from an NTFS volume on a Raw Image file."
-authors = ["sumeshi <j15322sn@gmail.com>"]
+authors = ["sumeshi <sum3sh1@protonmail.com>"]
 license = "MIT"
 readme = "README.md"
 
@@ -15,15 +15,15 @@ keywords = ['Windows']
 ntfsdump = 'ntfsdump:entry_point'
 
 [tool.poetry.dependencies]
-python = "^3.7"
-pytsk3 = "^20210419"
+python = "^3.9"
+pytsk3 = "^20211111"
 
 [tool.poetry.dev-dependencies]
-black = "^19.10b0"
-mypy = "^0.782"
-flake8 = "^3.8.3"
-poetry = "^1.0.9"
+black = "^22.1.0"
+mypy = "^0.931"
+flake8 = "^4.0.1"
+poetry = "^1.1.13"
 
 [build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
