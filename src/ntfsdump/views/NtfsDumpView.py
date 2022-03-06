@@ -1,5 +1,6 @@
 # coding: utf-8
 import sys
+from typing import Literal
 
 from ntfsdump.views.BaseView import BaseView
 from ntfsdump.presenters.NtfsDumpPresenter import NtfsDumpPresenter
@@ -37,6 +38,13 @@ class NtfsDumpView(BaseView):
             default=".",
             help="Output directory or file path(default: current directory \'.\' ).",
         )
+        self.parser.add_argument(
+            "--type",
+            "-t",
+            type=str,
+            default='raw',
+            help="Image file format (default: raw(dd-format))"
+        )
 
     def run(self):
         # pipeline stdin or args
@@ -46,7 +54,8 @@ class NtfsDumpView(BaseView):
             imagefile_path=self.args.imagefile_path,
             output_path=self.args.output_path,
             target_queries=target_queries,
-            volume_num=self.args.volume_num
+            volume_num=self.args.volume_num,
+            file_type=self.args.type,
         )
 
 def entry_point():

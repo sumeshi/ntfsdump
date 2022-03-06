@@ -1,22 +1,47 @@
 # coding: utf-8
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from ntfsdump.models.NtfsVolume import NtfsVolume
 
 import pytsk3
+import pyewf
+
+class ewf_Img_Info(pytsk3.Img_Info):
+  def __init__(self, ewf_handle):
+    self._ewf_handle = ewf_handle
+    super(ewf_Img_Info, self).__init__(
+        url="", type=pytsk3.TSK_IMG_TYPE_EXTERNAL)
+
+  def close(self):
+    self._ewf_handle.close()
+
+  def read(self, offset, size):
+    self._ewf_handle.seek(offset)
+    return self._ewf_handle.read(size)
+
+  def get_size(self):
+    return self._ewf_handle.get_media_size()
+
 
 class ImageFile(object):
-    def __init__(self, path: Path, volume_num: Optional[int]):
+    def __init__(self, path: Path, volume_num: Optional[int], file_type: Literal['raw', 'e01'] = 'raw'):
         self.path: Path = path
         self.block_size: int = 512
+        self.file_type: Literal['raw', 'e01'] = file_type
         self.volumes: List[NtfsVolume] = self.__analyze_partitions()
         self.main_volume: NtfsVolume = self.__auto_detect_main_partition(volume_num)
 
     def __analyze_partitions(self) -> List[NtfsVolume]:
-        img_info = pytsk3.Img_Info(str(self.path))
-        volumes = pytsk3.Volume_Info(img_info)
+        if self.file_type == 'e01':
+            filenames = pyewf.glob(str(self.path))
+            ewf_handle = pyewf.handle()
+            ewf_handle.open(filenames)
+            img_info = ewf_Img_Info(ewf_handle)
+        else:
+            img_info = pytsk3.Img_Info(str(self.path))
 
+        volumes = pytsk3.Volume_Info(img_info)
         self.block_size = volumes.info.block_size
 
         return [
