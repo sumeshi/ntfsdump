@@ -1,7 +1,7 @@
 # coding: utf-8
 import argparse
 from abc import ABCMeta, abstractmethod
-from importlib_metadata import version
+from importlib.metadata import version
 
 
 class BaseView(metaclass=ABCMeta):
