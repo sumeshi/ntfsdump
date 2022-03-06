@@ -42,7 +42,7 @@ class NtfsDumpView(BaseView):
         # pipeline stdin or args
         target_queries = [i.strip() for i in sys.stdin] if not sys.stdin.isatty() else self.args.target_queries
 
-        NtfsDumpPresenter.ntfsdump(
+        NtfsDumpPresenter().ntfsdump(
             imagefile_path=self.args.imagefile_path,
             output_path=self.args.output_path,
             target_queries=target_queries,
