@@ -51,6 +51,12 @@ $ ntfsfind '.*\.evtx' ./path/to/your/imagefile.raw | ntfsdump ./path/to/your/ima
 
 ### Options
 ```
+--help, -h:
+    show help message and exit.
+
+--version, -v:
+    show program's version number and exit.
+
 --volume-num, -n:
     NTFS volume number(default: autodetect).
 
