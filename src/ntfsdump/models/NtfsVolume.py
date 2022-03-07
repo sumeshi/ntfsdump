@@ -2,6 +2,8 @@
 from pathlib import Path
 from typing import List, Optional
 
+from ntfsdump.models.Log import Log
+
 import pytsk3
 
 
@@ -78,15 +80,18 @@ class NtfsVolume(object):
         return None
     
     def __write_file(self, destination_path: Path, content: Optional[bytes], filename: str) -> None:
+
+        logger = Log()
+
         # destination path is a file
         try:
             destination_path.write_bytes(content)
-            print(f"dumped: {destination_path}")
+            logger.log(f"[dumped] {destination_path}")
 
         # destination path is a directory
         except IsADirectoryError:
             Path(destination_path / filename).write_bytes(content)
-            print(f"dumped: {Path(destination_path / filename)}")
+            logger.log(f"[dumped] {Path(destination_path / filename)}")
 
     def dump_files(self, query: str, destination_path: Path) -> None:
         query = query.replace('\\', '/')
@@ -136,4 +141,4 @@ class NtfsVolume(object):
                 self.__write_file(destination_path, content, filename)
             except Exception as e:
                 print(e)
-                print(f"dump error: {query}")
+                print(f"[error]: {query}")
