@@ -7,7 +7,7 @@
 
 ![ntfsdump logo](https://gist.githubusercontent.com/sumeshi/c2f430d352ae763273faadf9616a29e5/raw/baa85b045e0043914218cf9c0e1d1722e1e7524b/ntfsdump.svg)
 
-A tool for exporting any files from an NTFS volume on a Raw Image file.
+A tool for extract any files from an NTFS volume on an image file.
 
 
 ## Usage
@@ -23,12 +23,14 @@ from ntfsdump import ntfsdump
 # output_path: str
 # target_queries: List[str]
 # volume_num: Optional[int] = None
+# file_type: Literal['raw', 'e01'] = 'raw'
 
 ntfsdump(
     imagefile_path='./path/to/your/imagefile.raw',
     output_path='./path/to/output/directory',
     target_queries=['/Windows/System32/winevt/Logs'],
-    volume_num=2
+    volume_num=2,
+    file_type='raw'
 )
 ```
 
@@ -40,6 +42,18 @@ In the case of a directory, it dumps the lower files recursively.
 $ ntfsdump /Windows/System32/winevt/Logs -o ./dump ./path/to/your/imagefile.raw
 ```
 
+extracting from E01 image (included splited-E01).
+
+```.bash
+$ls
+imagefile.E01
+imagefile.E02
+imagefile.E03
+imagefile.E04
+imagefile.E05
+
+$ ntfsdump /Windows/System32/winevt/Logs --type=e01 -o ./dump ./path/to/your/imagefile.E01
+```
 
 #### When use with [ntfsfind](https://github.com/sumeshi/ntfsfind)
 
@@ -58,7 +72,11 @@ $ ntfsfind '.*\.evtx' ./path/to/your/imagefile.raw | ntfsdump ./path/to/your/ima
     show program's version number and exit.
 
 --volume-num, -n:
-    NTFS volume number(default: autodetect).
+    NTFS volume number (default: autodetect).
+
+--type, -t:
+    Image file format (default: raw(dd-format)).
+    (raw|e01) are supported.
 
 --output-path, -o:
     Output directory or file path.
@@ -67,6 +85,16 @@ $ ntfsfind '.*\.evtx' ./path/to/your/imagefile.raw | ntfsdump ./path/to/your/ima
 
     Otherwise, the file is dumped with the file name specified in the --output-path.)
 ```
+
+## Prerequisites
+The image file to be processed must meet the following conditions.
+
+- raw or e01 file format
+- NT file system(NTFS)
+- GUID partition table(GPT)
+
+Additional file formats will be added in the future.  
+If you have any questions, please submit an issue.  
 
 ## Installation
 
