@@ -1,6 +1,15 @@
 # coding: utf-8
 from typing import Literal, Optional
+from importlib.metadata import version
+
 from ntfsdump.presenters.NtfsDumpPresenter import NtfsDumpPresenter
+
+
+def get_program_name() -> str:
+    return 'ntfsdump'
+
+def get_version() -> str:
+    return version(get_program_name())
 
 
 def ntfsdump(
