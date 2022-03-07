@@ -1,7 +1,7 @@
 # coding: utf-8
 from typing import Literal, Optional
-
 from ntfsdump.presenters.NtfsDumpPresenter import NtfsDumpPresenter
+
 
 def ntfsdump(
     imagefile_path: str,
