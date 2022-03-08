@@ -2,8 +2,8 @@
 from pathlib import Path
 from traceback import format_exc
 from datetime import datetime
+from importlib.metadata import entry_points, version
 
-from ntfsdump import get_program_name, get_version
 
 def get_datetime() -> datetime:
     return datetime.utcnow()
@@ -15,7 +15,7 @@ def get_strdatetime() -> str:
 class Log(object):
     def __init__(
         self,
-        path: Path = Path('.', f"{get_program_name()}_{get_strdatetime()}.log"),
+        path: Path = Path('.', f"{entry_points().get('name')}_{get_strdatetime()}.log"),
         is_quiet: bool = False
     ):
         """Logging class
@@ -29,7 +29,7 @@ class Log(object):
         self.__create_logfile()
 
     def __create_logfile(self):
-        self.path.write_text(f"- {get_program_name()} v{get_version()} - \n")
+        self.path.write_text(f"- {__package__} v{version(entry_points().get('name'))} - \n")
             
     def __write_to_log(self, message: str):
         try:
