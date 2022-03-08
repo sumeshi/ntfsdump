@@ -1,7 +1,9 @@
 # coding: utf-8
 import argparse
 from abc import ABCMeta, abstractmethod
-from importlib.metadata import entry_points, version
+
+from ntfsdump.models.MetaData import MetaData
+
 
 class BaseView(metaclass=ABCMeta):
 
@@ -10,7 +12,7 @@ class BaseView(metaclass=ABCMeta):
         self.__define_common_options()
 
     def __define_common_options(self):
-        self.parser.add_argument("--version", "-v", action="version", version=version(entry_points().get('name')))
+        self.parser.add_argument("--version", "-v", action="version", version=MetaData.version)
         self.parser.add_argument("--quiet", "-q", action='store_true', help="flag to suppress standard output.")
 
     @abstractmethod

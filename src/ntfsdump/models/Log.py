@@ -2,34 +2,37 @@
 from pathlib import Path
 from traceback import format_exc
 from datetime import datetime
-from importlib.metadata import entry_points, version
+
+from ntfsdump.models.MetaData import MetaData
 
 
 def get_datetime() -> datetime:
     return datetime.utcnow()
 
-def get_strdatetime() -> str:
-    return get_datetime().strftime('%Y%m%d_%H%M%S_%f')
+def get_logfile_time():
+    if not MetaData.run_time:
+        MetaData.run_time = get_datetime()
+    return MetaData.run_time.strftime('%Y%m%d_%H%M%S_%f')
 
 
 class Log(object):
     def __init__(
         self,
-        path: Path = Path('.', f"{entry_points().get('name')}_{get_strdatetime()}.log"),
-        is_quiet: bool = False
+        path: Path = Path('.', f"{MetaData.name}_{get_logfile_time()}.log"),
     ):
         """Logging class
 
         Args:
-            path (Path, optional): path of log file. Defaults to Path('.', f"{get_program_name()}_{get_strdatetime()}.log").
+            path (Path, optional): path of log file. Defaults to Path('.', f"{MetaData.name}_{get_logfile_time()}.log").
             is_quiet (bool, optional): flag to supress standard output. Defaults to False.
         """
         self.path = path
-        self.is_quiet = is_quiet
+        self.is_quiet = MetaData.quiet
         self.__create_logfile()
-
+    
     def __create_logfile(self):
-        self.path.write_text(f"- {__package__} v{version(entry_points().get('name'))} - \n")
+        if not self.path.exists():
+            self.path.write_text(f"- {MetaData.name} v{MetaData.version} - \n")
             
     def __write_to_log(self, message: str):
         try:
