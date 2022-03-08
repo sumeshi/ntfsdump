@@ -45,7 +45,7 @@ $ ntfsdump /Windows/System32/winevt/Logs -o ./dump ./path/to/your/imagefile.raw
 extracting from E01 image (included splited-E01).
 
 ```.bash
-$ls
+$ ls
 imagefile.E01
 imagefile.E02
 imagefile.E03
