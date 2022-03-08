@@ -1,6 +1,7 @@
 # coding: utf-8
 import sys
 
+from ntfsdump.models.MetaData import MetaData
 from ntfsdump.views.BaseView import BaseView
 from ntfsdump.presenters.NtfsDumpPresenter import NtfsDumpPresenter
 
@@ -48,6 +49,8 @@ class NtfsDumpView(BaseView):
     def run(self):
         # pipeline stdin or args
         target_queries = [i.strip() for i in sys.stdin] if not sys.stdin.isatty() else self.args.target_queries
+
+        MetaData.quiet = self.args.quiet
 
         NtfsDumpPresenter().ntfsdump(
             imagefile_path=self.args.imagefile_path,
