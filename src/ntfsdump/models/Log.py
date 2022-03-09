@@ -1,5 +1,6 @@
 # coding: utf-8
 from pathlib import Path
+from typing import Literal
 from traceback import format_exc
 from datetime import datetime
 
@@ -59,14 +60,18 @@ class Log(object):
         """
         print(f"\033[31m{message}\033[0m")
     
-    def log(self, message: str):
+    def log(self, message: str, type: Literal['system', 'info', 'danger'] = 'system'):
         """print and write message to logfile
 
         Args:
             message (str): a message to be logged.
+            type (Literal['system', 'info', 'danger']): 'system ' is used only for logging.
         """
         if not MetaData.nolog:
             self.__write_to_log(message)
         
         if not self.is_quiet:
-           self.print_info(message) 
+            if type == 'info':
+                self.print_info(message) 
+            elif type == 'danger':
+                self.print_danger(message) 
