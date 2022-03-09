@@ -14,6 +14,7 @@ class BaseView(metaclass=ABCMeta):
     def __define_common_options(self):
         self.parser.add_argument("--version", "-v", action="version", version=MetaData.version)
         self.parser.add_argument("--quiet", "-q", action='store_true', help="flag to suppress standard output.")
+        self.parser.add_argument("--nolog", "-n", action='store_true', help="flag to no logs are output.")
 
     @abstractmethod
     def define_options(self):

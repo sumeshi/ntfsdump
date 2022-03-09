@@ -9,3 +9,4 @@ class MetaData(object):
     version: Final[str] = version(name)
     run_time: Optional[datetime] = None
     quiet: bool = False
+    nolog: bool = False

@@ -28,7 +28,9 @@ class Log(object):
         """
         self.path = path
         self.is_quiet = MetaData.quiet
-        self.__create_logfile()
+
+        if not MetaData.nolog:
+            self.__create_logfile()
     
     def __create_logfile(self):
         if not self.path.exists():
@@ -63,6 +65,8 @@ class Log(object):
         Args:
             message (str): a message to be logged.
         """
-        self.__write_to_log(message)
+        if not MetaData.nolog:
+            self.__write_to_log(message)
+        
         if not self.is_quiet:
            self.print_info(message) 
