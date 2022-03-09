@@ -16,6 +16,10 @@ class NtfsVolume(object):
         self.start_byte = start_byte
         self.end_byte = end_byte
         self.fs_info = fs_info
+        self.logger = Log()
+    
+    def __clean_query(self, query: str) -> str:
+        return query.replace('\\', '/')
     
     def __is_dir(self, query: str) -> bool:
         f = self.fs_info.open(query)
@@ -33,7 +37,6 @@ class NtfsVolume(object):
         ]
     
     def __read_file(self, query: str) -> bytes:
-
         f = self.fs_info.open(query)
 
         offset = 0
@@ -53,10 +56,9 @@ class NtfsVolume(object):
         return result
     
     def __read_alternate_data_stream(self, query: str, ads: str) -> Optional[bytes]:
-        query = query.replace('\\', '/')
         f = self.fs_info.open(query)
 
-        OFFSET = 0
+        offset = 0
         BUFF_SIZE = 1024 * 1024
 
         ads_attribute = None
@@ -69,32 +71,30 @@ class NtfsVolume(object):
             result = bytes()
             ADS_SIZE = ads_attribute.info.size
 
-            while OFFSET < ADS_SIZE:
-                available_to_read = min(BUFF_SIZE, ADS_SIZE - OFFSET)
-                data = f.read_random(OFFSET, available_to_read, ads_attribute.info.type, ads_attribute.info.id)
+            while offset < ADS_SIZE:
+                available_to_read = min(BUFF_SIZE, ADS_SIZE - offset)
+                data = f.read_random(offset , available_to_read, ads_attribute.info.type, ads_attribute.info.id)
                 if not data: break
-                OFFSET += len(data)
+                offset += len(data)
                 result += data
             return result
         
         return None
     
     def __write_file(self, destination_path: Path, content: Optional[bytes], filename: str) -> None:
-
-        logger = Log()
-
         # destination path is a file
         try:
             destination_path.write_bytes(content)
-            logger.log(f"[dumped] {destination_path}")
+            self.logger.log(f"[dumped] {destination_path}", 'info')
 
         # destination path is a directory
         except IsADirectoryError:
             Path(destination_path / filename).write_bytes(content)
-            logger.log(f"[dumped] {Path(destination_path / filename)}")
+            self.logger.log(f"[dumped] {Path(destination_path / filename)}", 'info')
 
     def dump_files(self, query: str, destination_path: Path) -> None:
-        query = query.replace('\\', '/')
+        query = self.__clean_query(query)
+        self.logger.log(f"[query] {query}", 'system')
 
         if self.__is_dir(query):
             for artifact in self.__list_artifacts(query):
@@ -140,5 +140,5 @@ class NtfsVolume(object):
                 content = self.__read_file(query)
                 self.__write_file(destination_path, content, filename)
             except Exception as e:
-                print(e)
-                print(f"[error]: {query}")
+                self.logger.log(f"[error] {query}", 'danger')
+                self.logger.log(e, 'danger')

@@ -3,15 +3,16 @@ from pathlib import Path
 from typing import List, Literal, Optional
 
 from ntfsdump.models.NtfsVolume import NtfsVolume
+from ntfsdump.models.Log import Log
 
 import pytsk3
 import pyewf
 
+
 class ewf_Img_Info(pytsk3.Img_Info):
   def __init__(self, ewf_handle):
     self._ewf_handle = ewf_handle
-    super(ewf_Img_Info, self).__init__(
-        url="", type=pytsk3.TSK_IMG_TYPE_EXTERNAL)
+    super(ewf_Img_Info, self).__init__(url="", type=pytsk3.TSK_IMG_TYPE_EXTERNAL)
 
   def close(self):
     self._ewf_handle.close()
@@ -27,18 +28,26 @@ class ewf_Img_Info(pytsk3.Img_Info):
 class ImageFile(object):
     def __init__(self, path: Path, volume_num: Optional[int], file_type: Literal['raw', 'e01'] = 'raw'):
         self.path: Path = path
+        self.logger: Log = Log()
         self.block_size: int = 512
         self.file_type: Literal['raw', 'e01'] = file_type
         self.volumes: List[NtfsVolume] = self.__analyze_partitions()
         self.main_volume: NtfsVolume = self.__auto_detect_main_partition(volume_num)
 
+        self.logger.log(f"[analyze] {len(self.volumes)} volumes were detected as NTFS volumes.", 'system')
+        for index, volume in enumerate(self.volumes):
+            self.logger.log(f"[analyze] NTFS Volume {index}: {volume.description}", 'system')
+        self.logger.log(f"[analyze] Volume {self.volumes.index(self.main_volume)} was automatically detected as the main partition.", 'system')
+
     def __analyze_partitions(self) -> List[NtfsVolume]:
         if self.file_type == 'e01':
+            self.logger.log(f"[analyze] E01 Format Image", 'system')
             filenames = pyewf.glob(str(self.path))
             ewf_handle = pyewf.handle()
             ewf_handle.open(filenames)
             img_info = ewf_Img_Info(ewf_handle)
         else:
+            self.logger.log(f"[analyze] Raw Format Image", 'system')
             img_info = pytsk3.Img_Info(str(self.path))
 
         volumes = pytsk3.Volume_Info(img_info)
