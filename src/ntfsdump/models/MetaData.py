@@ -8,5 +8,5 @@ class MetaData(object):
     name: Final[str] = 'ntfsdump'
     version: Final[str] = version(name)
     run_time: Optional[datetime] = None
-    quiet: bool = False
-    nolog: bool = False
+    quiet: bool = True
+    nolog: bool = True

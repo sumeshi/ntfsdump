@@ -51,6 +51,7 @@ class NtfsDumpView(BaseView):
         target_queries = [i.strip() for i in sys.stdin] if not sys.stdin.isatty() else self.args.target_queries
 
         MetaData.quiet = self.args.quiet
+        MetaData.nolog = self.args.nolog
 
         NtfsDumpPresenter().ntfsdump(
             imagefile_path=self.args.imagefile_path,
