@@ -45,7 +45,7 @@ $ ntfsdump /Windows/System32/winevt/Logs -o ./dump ./path/to/your/imagefile.raw
 extracting from E01 image (included splited-E01).
 
 ```.bash
-$ls
+$ ls
 imagefile.E01
 imagefile.E02
 imagefile.E03
@@ -71,6 +71,12 @@ $ ntfsfind '.*\.evtx' ./path/to/your/imagefile.raw | ntfsdump ./path/to/your/ima
 --version, -v:
     show program's version number and exit.
 
+--quiet, -q:
+    flat to suppress standard output.
+
+--nolog:
+    flag to no logs are output.
+
 --volume-num, -n:
     NTFS volume number (default: autodetect).
 
@@ -95,6 +101,20 @@ The image file to be processed must meet the following conditions.
 
 Additional file formats will be added in the future.  
 If you have any questions, please submit an issue.  
+
+
+## LogFormat
+ntfsdump outputs logs in the following format.  
+By default, it outputs the files to the current directory, but if you do not need them, please use the `--nolog` option.
+
+```
+- ntfsdump v{{version}} - 
+2022-01-01T00:00:00.000000: [{{EventName}}] {{Description}}
+2022-01-01T00:00:00.000000: [{{EventName}}] {{Description}}
+2022-01-01T00:00:00.000000: [{{EventName}}] {{Description}}
+...
+```
+
 
 ## Installation
 
