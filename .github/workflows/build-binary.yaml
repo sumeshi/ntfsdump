@@ -23,10 +23,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       
       - name: replace ntfsdump
-        run: cat pyproject.toml | grep version | sed 's/.*\ //g' | xargs -I@ sed -i "s/version(name)/'@'/g" src/ntfsdump/models/MetaData.py
-      
-      - name: cat
-        run: cat src/ntfsdump/models/MetaData.py
+        run: cat pyproject.toml | grep version | sed 's/.*\ //g' | xargs -I@ sed -i 's/version(name)/"@"/g' src/ntfsdump/models/MetaData.py
 
       - name: setup poetry
         run: |
@@ -36,7 +33,7 @@ jobs:
       - name: build
         run: |
           pip install pyinstaller
-          pyinstaller --onefile -p src:src/ntfsdump -n ntfsdump src/ntfsdump/views/NtfsDumpView.py
+          pyinstaller --onefile -p src -n ntfsdump src/ntfsdump/views/NtfsDumpView.py
       
       - name: verify
         run: dist/ntfsdump.exe -h
