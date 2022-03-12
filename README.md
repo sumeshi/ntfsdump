@@ -4,6 +4,7 @@
 [![PyPI version](https://badge.fury.io/py/ntfsdump.svg)](https://badge.fury.io/py/ntfsdump)
 [![Python Versions](https://img.shields.io/pypi/pyversions/ntfsdump.svg)](https://pypi.org/project/ntfsdump/)
 [![DockerHub Status](https://shields.io/docker/cloud/build/sumeshi/ntfsdump)](https://hub.docker.com/r/sumeshi/ntfsdump)
+![pytest](https://github.com/sumeshi/ntfsdump/actions/workflows/test/badge.svg)
 
 ![ntfsdump logo](https://gist.githubusercontent.com/sumeshi/c2f430d352ae763273faadf9616a29e5/raw/baa85b045e0043914218cf9c0e1d1722e1e7524b/ntfsdump.svg)
 
