@@ -33,7 +33,7 @@ jobs:
       - name: build
         run: |
           pip install pyinstaller
-          pyinstaller --onefile -p src -n ntfsdump-windows src/ntfsdump/views/NtfsDumpView.py
+          pyinstaller --onefile -p src:src/ntfsdump -n ntfsdump-windows src/ntfsdump/views/NtfsDumpView.py
       
       - name: verify
         run: dist/ntfsdump-windows.exe -h
