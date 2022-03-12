@@ -36,7 +36,7 @@ jobs:
           pyinstaller --onefile -p src -n ntfsdump-windows src/ntfsdump/views/NtfsDumpView.py
       
       - name: verify
-        run: dist/ntfsdump.exe -h
+        run: dist/ntfsdump-windows.exe -h
 
       - name: upload
         uses: actions/upload-artifact@v3
