@@ -1,0 +1,45 @@
+name: build-binary
+
+on:
+  push:
+    branches:
+      - develop
+  # release:
+  #   types: [published]
+
+jobs:
+  build-linux:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.9']
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: install python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: replace ntfsdump
+        run: cat pyproject.toml | grep version | sed 's/.*\ //g' | xargs -I@ sed -i "s/version(name)/'@'/g" src/ntfsdump/models/MetaData.py
+
+      - name: setup poetry
+        run: |
+          pip install poetry
+          poetry install --no-interaction
+
+      - name: build
+        run: |
+          pip install pyinstaller
+          pyinstaller --onefile -p src -n ntfsdump src/ntfsdump/views/NtfsDumpView.py
+      
+      - name: verify
+        run: dist/ntfsdump.exe -h
+
+      - name: upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: ntfsdump-windows
+          path: dist/ntfsdump.exe
