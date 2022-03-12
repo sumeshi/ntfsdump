@@ -14,7 +14,7 @@ A tool for extract any files from an NTFS volume on an image file.
 ## Usage
 
 ```bash
-$ ntfsdump <dump_target_winpath> --output-path <ouput_path> ./path/to/your/imagefile.raw
+$ ntfsdump {{query}} --output-path {{output_dir}} /path/to/imagefile.raw
 ```
 
 ```python
@@ -34,6 +34,27 @@ ntfsdump(
     file_type='raw'
 )
 ```
+
+### Query
+
+Basically, enter the windows path to the file you want to extract.
+The paths are separated by slashes.
+
+e.g.
+```
+Original Path: C:\$MFT
+Query: /$MFT
+
+Original Path: C:\$Extend\$UsnJrnl\$J
+Query: /$Extend/$UsnJrnl/$J
+
+Original Path: C:\Windows\System32\winevt\Logs
+Query: /Windows/System32/winevt/Logs
+```
+
+Queries will be expanded in the future.
+If you have any questions, please submit an issue.  
+
 
 ### Example
 The target path can be either alone or in a directory.
@@ -130,7 +151,7 @@ https://hub.docker.com/r/sumeshi/ntfsdump
 
 
 ```bash
-$ docker run -t --rm -v $(pwd):/app/work sumeshi/ntfsdump:latest '/$MFT' /app/work/sample.raw
+$ docker run --rm -v $(pwd):/app -t sumeshi/ntfsdump:latest '/$MFT' /app/sample.raw
 ```
 
 ## Contributing
@@ -143,7 +164,4 @@ Please report issues and feature requests. :sushi: :sushi: :sushi:
 
 ntfsdump is released under the [MIT](https://github.com/sumeshi/ntfsdump/blob/master/LICENSE) License.
 
-Powered by [pytsk3](https://github.com/py4n6/pytsk).  
-Powered by [libewf](https://github.com/libyal/libewf).
-
-Powered by [ntfs-samples](https://github.com/msuhanov/ntfs-samples).
+Powered by [pytsk3](https://github.com/py4n6/pytsk), [libewf](https://github.com/libyal/libewf) and [ntfs-samples](https://github.com/msuhanov/ntfs-samples).
