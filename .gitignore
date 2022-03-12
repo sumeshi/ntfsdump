@@ -133,5 +133,5 @@ dmypy.json
 **/*.tgs
 **/*.E01
 
-/test/ntfsdump/cache/*
-!/test/ntfsdump/cache/.gitkeep
+/tests/ntfsdump/cache/*
+!/tests/ntfsdump/cache/.gitkeep
