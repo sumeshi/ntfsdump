@@ -24,6 +24,7 @@ black = "^22.1.0"
 mypy = "^0.931"
 flake8 = "^4.0.1"
 poetry = "^1.1.13"
+pytest = "^7.0.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

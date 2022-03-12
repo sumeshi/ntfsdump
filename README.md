@@ -143,3 +143,6 @@ Please report issues and feature requests. :sushi: :sushi: :sushi:
 ntfsdump is released under the [MIT](https://github.com/sumeshi/ntfsdump/blob/master/LICENSE) License.
 
 Powered by [pytsk3](https://github.com/py4n6/pytsk).  
+Powered by [libewf](https://github.com/libyal/libewf).
+
+Powered by [ntfs-samples](https://github.com/msuhanov/ntfs-samples).
