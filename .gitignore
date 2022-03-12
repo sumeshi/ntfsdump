@@ -130,3 +130,8 @@ dmypy.json
 
 .vscode
 **/*.raw
+**/*.tgs
+**/*.E01
+
+/tests/ntfsdump/cache/*
+!/tests/ntfsdump/cache/.gitkeep
