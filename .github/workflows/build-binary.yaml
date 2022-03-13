@@ -27,6 +27,7 @@ jobs:
 
       - name: setup poetry
         run: |
+          pip install -U pip
           pip install poetry
           poetry install --no-interaction
 
