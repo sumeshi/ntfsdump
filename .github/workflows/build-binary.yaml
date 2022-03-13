@@ -32,7 +32,7 @@ jobs:
 
       - name: build
         run: |
-          poetry add --dev pyinstaller
+          poetry add --dev pyinstaller==4.8
           poetry run pyinstaller --onefile -p 'src' -n ntfsdump-windows src/ntfsdump/views/NtfsDumpView.py
       
       - name: verify
