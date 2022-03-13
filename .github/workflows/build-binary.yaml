@@ -22,10 +22,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       
-      - name: replace ntfsdump
-        run: |
-          cat pyproject.toml | grep version | sed 's/.*\ //g' | xargs -I@ sed -i 's/version(name)/"@"/g' src/ntfsdump/models/MetaData.py
-          grep -rl 'from ntfsdump' . | sed 's|\\|/|g' | xargs sed -i 's/from ntfsdump./from /g'
+      - name: replace version
+        run: cat pyproject.toml | grep version | sed 's/.*\ //g' | xargs -I@ sed -i 's/version(name)/"@"/g' src/ntfsdump/models/MetaData.py
+
+      - name: replace packages
+        run: grep -rl 'from ntfsdump' src | sed 's|\\|/|g' | xargs sed -i 's/from ntfsdump./from /g'
 
       - name: setup poetry
         run: |
