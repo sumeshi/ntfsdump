@@ -24,6 +24,13 @@ jobs:
       
       - name: replace version
         run: cat pyproject.toml | grep version | sed 's/.*\ //g' | xargs -I@ sed -i 's/version(name)/"@"/g' src/ntfsdump/models/MetaData.py
+      
+      - name: add init file
+        run: |
+          touch src/__init__.py
+          touch src/ntfsdump/models/__init__.py
+          touch src/ntfsdump/presenters/__init__.py
+          touch src/ntfsdump/views/__init__.py
 
       - name: setup poetry
         run: |
