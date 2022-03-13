@@ -40,8 +40,8 @@ jobs:
 
       - name: build
         run: |
-          poetry run pip install pyinstaller
-          poetry run pyinstaller --onefile -p . -p src -p src/ntfsdump -p ./.venv/Lib/ -p ./.venv/Lib/site-packages -n ntfsdump-windows ./.venv/Scripts/ntfsdump
+          pip install pyinstaller
+          pyinstaller --onefile -p . -p src -p src/ntfsdump -p ./.venv/Lib/ -p ./.venv/Lib/site-packages -n ntfsdump-windows ./.venv/Scripts/ntfsdump
       
       - name: verify
         run: dist/ntfsdump-windows.exe -h
