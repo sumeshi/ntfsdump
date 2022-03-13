@@ -34,6 +34,7 @@ jobs:
 
       - name: build
         run: |
+          ls .venv/Scripts
           ls .venv/Lib/site-packages
           ls .venv/Lib/site-packages/ntfsdump
           poetry run pip install pyinstaller
