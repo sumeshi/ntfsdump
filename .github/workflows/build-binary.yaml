@@ -34,11 +34,8 @@ jobs:
 
       - name: build
         run: |
-          ls .venv/Scripts
-          ls .venv/Lib/site-packages
-          ls .venv/Lib/site-packages/ntfsdump
           poetry run pip install pyinstaller
-          poetry run pyinstaller --onefile -n ntfsdump-windows .venv/Lib/site-packages/ntfsdump/views/NtfsDumpView.py
+          poetry run pyinstaller --onefile -n ntfsdump-windows .venv/Scripts/ntfsdump
       
       - name: verify
         run: dist/ntfsdump-windows.exe -h
