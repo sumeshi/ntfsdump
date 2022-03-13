@@ -34,7 +34,7 @@ jobs:
       - name: build
         run: |
           poetry run pip install pyinstaller
-          poetry run pyinstaller --onefile -n ntfsdump-windows .venv/bin/ntfsdump
+          poetry run pyinstaller --onefile -n ntfsdump-windows `which ntfsdump`
       
       - name: verify
         run: dist/ntfsdump-windows.exe -h
