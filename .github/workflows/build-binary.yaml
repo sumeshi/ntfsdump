@@ -27,7 +27,7 @@ jobs:
 
       - name: replace packages
         run: |
-          grep -rl 'from ntfsdump' src | sed 's|\\|/|g' | xargs -I@ sed -i 's/from ntfsdump./from /g' @
+          grep -rl 'from ntfsdump' src | sed 's|\\|/|g' | xargs -Iaaa sed -i 's/from ntfsdump./from /g' aaa
 
       - name: setup poetry
         run: |
