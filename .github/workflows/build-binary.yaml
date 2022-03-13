@@ -27,13 +27,13 @@ jobs:
 
       - name: replace packages
         run: |
-          sed -i 's/from ntfsdump./from /g' src/ntfsdump/models/ImageFile.py
-          sed -i 's/from ntfsdump./from /g' src/ntfsdump/models/Log.py
-          sed -i 's/from ntfsdump./from /g' src/ntfsdump/models/NtfsVolume.py
-          sed -i 's/from ntfsdump./from /g' src/ntfsdump/presenters/NtfsDumpPresenter.py
-          sed -i 's/from ntfsdump./from /g' src/ntfsdump/views/BaseView.py
-          sed -i 's/from ntfsdump./from /g' src/ntfsdump/views/NtfsDumpView.py
-          sed -i 's/from ntfsdump./from /g' src/ntfsdump/__init__.py
+          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/models/ImageFile.py
+          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/models/Log.py
+          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/models/NtfsVolume.py
+          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/presenters/NtfsDumpPresenter.py
+          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/views/BaseView.py
+          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/views/NtfsDumpView.py
+          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/__init__.py
 
       - name: setup poetry
         run: |
