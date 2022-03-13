@@ -27,7 +27,13 @@ jobs:
 
       - name: replace packages
         run: |
-          grep -rl 'from ntfsdump' src | sed 's|\\|/|g' | xargs -Iaaa sed -i 's/from ntfsdump./from /g' aaa
+          sed -i 's/from ntfsdump./from /g' src/ntfsdump/models/ImageFile.py
+          sed -i 's/from ntfsdump./from /g' src/ntfsdump/models/Log.py
+          sed -i 's/from ntfsdump./from /g' src/ntfsdump/models/NtfsVolume.py
+          sed -i 's/from ntfsdump./from /g' src/ntfsdump/presenters/NtfsDumpPresenter.py
+          sed -i 's/from ntfsdump./from /g' src/ntfsdump/views/BaseView.py
+          sed -i 's/from ntfsdump./from /g' src/ntfsdump/views/NtfsDumpView.py
+          sed -i 's/from ntfsdump./from /g' src/ntfsdump/__init__.py
 
       - name: setup poetry
         run: |
