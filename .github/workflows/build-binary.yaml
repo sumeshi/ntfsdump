@@ -25,6 +25,12 @@ jobs:
       - name: replace version
         run: cat pyproject.toml | grep version | sed 's/.*\ //g' | xargs -I@ sed -i 's/version(name)/"@"/g' src/ntfsdump/models/MetaData.py
 
+      - name: touch init files
+        run: |
+          touch src/ntfsdump/models/__init__.py
+          touch src/ntfsdump/presenters/__init__.py
+          touch src/ntfsdump/views/__init__.py
+
       - name: setup poetry
         run: |
           pip install poetry
@@ -35,7 +41,7 @@ jobs:
       - name: build
         run: |
           poetry run pip install pyinstaller
-          poetry run pyinstaller --onefile -p . -p src -p ./.venv/Lib/ -p ./.venv/Lib/site-packages -n ntfsdump-windows ./.venv/Scripts/ntfsdump
+          poetry run pyinstaller --onefile -p . -p src -p src/ntfsdump -p ./.venv/Lib/ -p ./.venv/Lib/site-packages -n ntfsdump-windows ./.venv/Scripts/ntfsdump
       
       - name: verify
         run: dist/ntfsdump-windows.exe -h
