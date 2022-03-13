@@ -15,7 +15,7 @@ keywords = ['Windows']
 ntfsdump = 'ntfsdump.views.NtfsDumpView:entry_point'
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9"
 pytsk3 = "^20211111"
 libewf-python = "^20201230"
 
