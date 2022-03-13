@@ -32,8 +32,8 @@ jobs:
 
       - name: build
         run: |
-          pip install pyinstaller
-          pyinstaller --onefile -p 'src:src\ntfsfind' -n ntfsdump-windows src/ntfsdump/views/NtfsDumpView.py
+          poetry add --dev pyinstaller
+          poetry run pyinstaller --onefile -p 'src' -n ntfsdump-windows src/ntfsdump/views/NtfsDumpView.py
       
       - name: verify
         run: dist/ntfsdump-windows.exe -h
