@@ -30,10 +30,10 @@ jobs:
           pip install poetry
           poetry config virtualenvs.in-project true
           poetry install --no-interaction
+          poetry install
 
       - name: build
         run: |
-          ls .venv/Lib
           ls .venv/Lib/site-packages
           ls .venv/Lib/site-packages/ntfsdump
           poetry run pip install pyinstaller
