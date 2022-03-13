@@ -25,7 +25,7 @@ jobs:
       - name: replace ntfsdump
         run: |
           cat pyproject.toml | grep version | sed 's/.*\ //g' | xargs -I@ sed -i 's/version(name)/"@"/g' src/ntfsdump/models/MetaData.py
-          grep -rl 'from ntfsdump' src | sed 's|\\|/|g' | xargs sed -i 's/from ntfsdump./from /g'
+          grep -rl 'from ntfsdump' . | sed 's|\\|/|g' | xargs sed -i 's/from ntfsdump./from /g'
 
       - name: setup poetry
         run: |
