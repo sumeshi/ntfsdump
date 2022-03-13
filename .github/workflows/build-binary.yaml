@@ -33,8 +33,8 @@ jobs:
 
       - name: build
         run: |
-          ls
-          ls .venv
+          ls .venv/Lib
+          ls .venv/Lib/site-packages
           ls .venv/Lib/site-packages/ntfsdump
           poetry run pip install pyinstaller
           poetry run pyinstaller --onefile -n ntfsdump-windows .venv/Lib/site-packages/ntfsdump/views/NtfsDumpView.py
