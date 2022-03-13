@@ -34,7 +34,7 @@ jobs:
 
       - name: build
         run: |
-          poetry run pip install pyinstaller/
+          poetry run pip install pyinstaller
           poetry run pyinstaller --onefile -p src -p ./.venv/Lib/ -p ./.venv/Lib/site-packages -n ntfsdump-windows ./.venv/Scripts/ntfsdump
       
       - name: verify
