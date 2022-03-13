@@ -25,16 +25,6 @@ jobs:
       - name: replace version
         run: cat pyproject.toml | grep version | sed 's/.*\ //g' | xargs -I@ sed -i 's/version(name)/"@"/g' src/ntfsdump/models/MetaData.py
 
-      - name: replace packages
-        run: |
-          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/models/ImageFile.py
-          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/models/Log.py
-          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/models/NtfsVolume.py
-          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/presenters/NtfsDumpPresenter.py
-          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/views/BaseView.py
-          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/views/NtfsDumpView.py
-          sed -i 's/from ntfsdump/from src.ntfsdump/g' src/ntfsdump/__init__.py
-
       - name: setup poetry
         run: |
           pip install poetry
@@ -45,7 +35,7 @@ jobs:
       - name: build
         run: |
           poetry run pip install pyinstaller
-          poetry run pyinstaller --onefile -n ntfsdump-windows src/ntfsdump/views/NtfsDumpView.py
+          poetry run pyinstaller --onefile -p src -p src\\ntfsdump -n ntfsdump-windows src/ntfsdump/views/NtfsDumpView.py
       
       - name: verify
         run: dist/ntfsdump-windows.exe -h
