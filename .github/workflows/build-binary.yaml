@@ -1,8 +1,9 @@
 name: build-binary
 
 on:
-  release:
-    types: [published, edited]
+  push:
+    branches:
+      - master
 
 jobs:
   build-windows:
@@ -41,13 +42,12 @@ jobs:
       - name: build
         run: |
           pip install pyinstaller
-          pyinstaller --onefile -p . -p src -p src/ntfsdump -p ./.venv/Lib/ -p ./.venv/Lib/site-packages -n ntfsdump-windows ./.venv/Scripts/ntfsdump
+          pyinstaller --onefile -p . -p src -p src/ntfsdump -p ./.venv/Lib/ -p ./.venv/Lib/site-packages -n ntfsdump ./.venv/Scripts/ntfsdump
       
       - name: verify
-        run: dist/ntfsdump-windows.exe -h
+        run: dist/ntfsdump.exe -h
 
-      - name: upload
-        uses: actions/upload-artifact@v3
+      - name: 
+        uses: softprops/action-gh-release@v1
         with:
-          name: ntfsdump-windows
-          path: dist/ntfsdump-windows.exe
+          path: dist/ntfsdump.exe
