@@ -1,0 +1,53 @@
+name: build-binary
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.10']
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: install python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: replace version
+        run: |
+          from pathlib import Path
+          version = [l for l in Path('pyproject.toml').read_text().splitlines() if 'version' in l][0].split(' ')[-1].strip('\"')
+          f = Path('src/ntfsdump/models/MetaData.py')
+          text = f.read_text().replace("version(name)", f"\'{version}\'")
+          f.write_text(text)
+        shell: python
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry config virtualenvs.in-project true
+          poetry install
+
+      - name: run python
+        run: |
+          poetry run ntfsdump -h
+
+      - name: build
+        run: |
+          pip install pyinstaller
+          pyinstaller --onefile -p . -p src -p src/ntfsdump -p ./.venv/Lib/ -p ./.venv/Lib/site-packages -n ntfsdump-windows ./.venv/Scripts/ntfsdump
+      
+      - name: verify
+        run: dist/ntfsdump-windows.exe -h
+
+      - name: upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: ntfsdump-windows
+          path: dist/ntfsdump-windows.exe
