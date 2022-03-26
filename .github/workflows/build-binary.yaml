@@ -50,4 +50,4 @@ jobs:
       - name: upload
         uses: softprops/action-gh-release@v1
         with:
-          path: dist/ntfsdump.exe
+          files: dist/ntfsdump.exe
