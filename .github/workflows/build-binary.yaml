@@ -47,7 +47,7 @@ jobs:
       - name: verify
         run: dist/ntfsdump.exe -h
 
-      - name: 
+      - name: upload
         uses: softprops/action-gh-release@v1
         with:
           path: dist/ntfsdump.exe
