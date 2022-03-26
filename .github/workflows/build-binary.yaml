@@ -2,7 +2,7 @@ name: build-binary
 
 on:
   release:
-    types: [published]
+    types: [published, edited]
 
 jobs:
   build-windows:
