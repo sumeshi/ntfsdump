@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ntfsdump"
-version = "2.3.3"
+version = "2.3.4"
 description = "A tool for extract any files from an NTFS volume on an image file."
 authors = ["sumeshi <sum3sh1@protonmail.com>"]
 license = "LGPLv3+"
