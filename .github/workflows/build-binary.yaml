@@ -25,7 +25,7 @@ jobs:
           from pathlib import Path
           version = [l for l in Path('pyproject.toml').read_text().splitlines() if 'version' in l][0].split(' ')[-1].strip('\"')
           f = Path('src/ntfsdump/models/MetaData.py')
-          text = f.read_text().replace("version(name)", f"\'{version}\'")
+          text = f.read_text().replace("get_version(name)", f"\'{version}\'")
           f.write_text(text)
         shell: python
 
