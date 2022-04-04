@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ntfsdump"
-version = "2.3.5"
+version = "2.4.0"
 description = "A tool for extract any files from an NTFS volume on an image file."
 authors = ["sumeshi <sum3sh1@protonmail.com>"]
 license = "LGPLv3+"
@@ -18,6 +18,8 @@ ntfsdump = 'ntfsdump.views.NtfsDumpView:entry_point'
 python = "^3.9"
 pytsk3 = "^20211111"
 libewf-python = "^20201230"
+libvmdk-python = "^20210807"
+libvhdi-python = "^20210425"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
