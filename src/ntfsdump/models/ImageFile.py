@@ -7,30 +7,59 @@ from ntfsdump.models.Log import Log
 
 import pytsk3
 import pyewf
+import pyvhdi
+import pyvmdk
 
 
-class ewf_Img_Info(pytsk3.Img_Info):
-  def __init__(self, ewf_handle):
-    self._ewf_handle = ewf_handle
-    super(ewf_Img_Info, self).__init__(url="", type=pytsk3.TSK_IMG_TYPE_EXTERNAL)
+class Img_Info(pytsk3.Img_Info):
+    def __init__(self, handle):
+        self.handle = handle
+        super(Img_Info, self).__init__(url="", type=pytsk3.TSK_IMG_TYPE_EXTERNAL)
 
-  def close(self):
-    self._ewf_handle.close()
+    def close(self):
+        self.handle.close()
 
-  def read(self, offset, size):
-    self._ewf_handle.seek(offset)
-    return self._ewf_handle.read(size)
+    def read(self, offset, size):
+        self.handle.seek(offset)
+        return self.handle.read(size)
 
-  def get_size(self):
-    return self._ewf_handle.get_media_size()
+    def get_size(self):
+        return self.handle.get_media_size()
 
 
 class ImageFile(object):
-    def __init__(self, path: Path, volume_num: Optional[int], file_type: Literal['raw', 'e01'] = 'raw'):
+    def __init__(
+        self,
+        path: Path,
+        volume_num: Optional[int],
+        file_type: Literal[
+            'raw',
+            'RAW',
+            'e01',
+            'E01',
+            'vhd',
+            'VHD',
+            'vhdx',
+            'VHDX',
+            'vmdk',
+            'VMDK',
+        ] = 'raw'
+    ):
         self.path: Path = path
         self.logger: Log = Log()
         self.block_size: int = 512
-        self.file_type: Literal['raw', 'e01'] = file_type
+        self.file_type: Literal[
+            'raw',
+            'RAW',
+            'e01',
+            'E01',
+            'vhd',
+            'VHD',
+            'vhdx',
+            'VHDX',
+            'vmdk',
+            'VMDK',
+        ] = file_type
         self.volumes: List[NtfsVolume] = self.__analyze_partitions()
         self.main_volume: NtfsVolume = self.__auto_detect_main_partition(volume_num)
 
@@ -40,12 +69,24 @@ class ImageFile(object):
         self.logger.log(f"[analyze] Volume {self.volumes.index(self.main_volume)} was automatically detected as the main partition.", 'system')
 
     def __analyze_partitions(self) -> List[NtfsVolume]:
-        if self.file_type == 'e01':
+        if self.file_type in ['e01', 'E01']:
             self.logger.log(f"[analyze] E01 Format Image", 'system')
             filenames = pyewf.glob(str(self.path))
             ewf_handle = pyewf.handle()
             ewf_handle.open(filenames)
-            img_info = ewf_Img_Info(ewf_handle)
+            img_info = Img_Info(ewf_handle)
+        elif self.file_type in ['vhd', 'vhdx', 'VHD', 'VHDX']:
+            self.logger.log(f"[analyze] VHD Format Image", 'system')
+            filenames = pyvhdi.glob(str(self.path))
+            vhdi_handle = pyvhdi.handle()
+            vhdi_handle.open(filenames)
+            img_info = Img_Info(vhdi_handle)
+        elif self.file_type == ['vmdk', 'VMDK']:
+            self.logger.log(f"[analyze] VMDK Format Image", 'system')
+            filenames = pyvmdk.glob(str(self.path))
+            vmdk_handle = pyvmdk.handle()
+            vmdk_handle.open(filenames)
+            img_info = Img_Info(vmdk_handle)
         else:
             self.logger.log(f"[analyze] Raw Format Image", 'system')
             img_info = pytsk3.Img_Info(str(self.path))
