@@ -77,15 +77,14 @@ class ImageFile(object):
             img_info = Img_Info(ewf_handle)
         elif self.file_type in ['vhd', 'vhdx', 'VHD', 'VHDX']:
             self.logger.log(f"[analyze] VHD Format Image", 'system')
-            filenames = pyvhdi.glob(str(self.path))
-            vhdi_handle = pyvhdi.handle()
-            vhdi_handle.open(filenames)
-            img_info = Img_Info(vhdi_handle)
+            vhdi_file = pyvhdi.file()
+            vhdi_file.open(str(self.path))
+            img_info = Img_Info(vhdi_file)
         elif self.file_type == ['vmdk', 'VMDK']:
             self.logger.log(f"[analyze] VMDK Format Image", 'system')
-            filenames = pyvmdk.glob(str(self.path))
             vmdk_handle = pyvmdk.handle()
-            vmdk_handle.open(filenames)
+            vmdk_handle.open(str(self.path))
+            vmdk_handle.open_extent_data_files()
             img_info = Img_Info(vmdk_handle)
         else:
             self.logger.log(f"[analyze] Raw Format Image", 'system')
