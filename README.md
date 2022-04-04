@@ -104,7 +104,7 @@ $ ntfsfind '.*\.evtx' ./path/to/your/imagefile.raw | ntfsdump ./path/to/your/ima
 
 --type, -t:
     Image file format (default: raw(dd-format)).
-    (raw|e01) are supported.
+    (raw|e01|vhd|vhdx|vmdk) are supported.
 
 --output-path, -o:
     Output directory or file path.
