@@ -294,6 +294,22 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "libvhdi-python"
+version = "20210425"
+description = "Python bindings module for libvhdi"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "libvmdk-python"
+version = "20210807"
+description = "Python bindings module for libvmdk"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "lockfile"
 version = "0.12.2"
 description = "Platform-independent file locking module"
@@ -680,7 +696,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "df7675d62f40d0d8670f5d4096d6a45ecdefb009f853f9ee1dada383243b129f"
+content-hash = "4eb7a7f797a551de6ee920fe8d48093eacda302d6e4300a78c87742d74add207"
 
 [metadata.files]
 atomicwrites = [
@@ -868,6 +884,16 @@ libewf-python = [
     {file = "libewf_python-20201230-cp27-cp27m-win_amd64.whl", hash = "sha256:407b8edd45ed853a9edbcba594c5497dbb29b5078f3a8cd1ccbbdf0bc2df9c2a"},
     {file = "libewf_python-20201230-cp39-cp39-win32.whl", hash = "sha256:b486690f47cd9be32bc2d10bba5f8c1097b928c1bd3c66821b2fc79fd6e0272a"},
     {file = "libewf_python-20201230-cp39-cp39-win_amd64.whl", hash = "sha256:c6ae2200bb1a9fda959d4f762dae6875100ce29e178188aa7aee1d58b005a73f"},
+]
+libvhdi-python = [
+    {file = "libvhdi-python-20210425.tar.gz", hash = "sha256:ed5818f5fd0fffc3eeca92fc56c1d4f54450a90f9d4f55ea5c5d1edf8b219a3b"},
+]
+libvmdk-python = [
+    {file = "libvmdk-python-20210807.tar.gz", hash = "sha256:c82f1050c237837dbfaf5b011ed61c49c42f5946c45802f66d611f54aecb2fc8"},
+    {file = "libvmdk_python-20210807-cp27-cp27m-win32.whl", hash = "sha256:287efffff8ef6ac924c80d1280949b5396c7c89a7ae783ecce6081d1489090d9"},
+    {file = "libvmdk_python-20210807-cp27-cp27m-win_amd64.whl", hash = "sha256:d0670bf181fe78d6fd193f9798d113d2cafd3796686e7b59f94ce9129c49cacf"},
+    {file = "libvmdk_python-20210807-cp39-cp39-win32.whl", hash = "sha256:1e8f5fcd4d7fd2ab311d95907d82b4bcf23bfa4acb95cc52649d9316d3dc8c2e"},
+    {file = "libvmdk_python-20210807-cp39-cp39-win_amd64.whl", hash = "sha256:71e34fd36131c8ec319687eced703e0fd45831d2407d547d810c764824f2393d"},
 ]
 lockfile = [
     {file = "lockfile-0.12.2-py2.py3-none-any.whl", hash = "sha256:6c3cb24f344923d30b2785d5ad75182c8ea7ac1b6171b08657258ec7429d50fa"},
