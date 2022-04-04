@@ -2,8 +2,10 @@ name: build-binary
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches:
+      - feature/vmformats
+    # tags:
+    #   - "v*.*.*"
 
 jobs:
   build-windows:
@@ -47,7 +49,7 @@ jobs:
       - name: verify
         run: dist/ntfsdump.exe -h
 
-      - name: upload
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/ntfsdump.exe
+      # - name: upload
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     files: dist/ntfsdump.exe
