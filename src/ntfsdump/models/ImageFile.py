@@ -80,7 +80,7 @@ class ImageFile(object):
             vhdi_file = pyvhdi.file()
             vhdi_file.open(str(self.path))
             img_info = Img_Info(vhdi_file)
-        elif self.file_type == ['vmdk', 'VMDK']:
+        elif self.file_type in ['vmdk', 'VMDK']:
             self.logger.log(f"[analyze] VMDK Format Image", 'system')
             vmdk_handle = pyvmdk.handle()
             vmdk_handle.open(str(self.path))
