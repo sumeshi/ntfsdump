@@ -24,7 +24,7 @@ from ntfsdump import ntfsdump
 # output_path: str
 # target_queries: List[str]
 # volume_num: Optional[int] = None
-# file_type: Literal['raw', 'e01'] = 'raw'
+# file_type: Literal['raw', 'e01', 'vhd', 'vhdx', 'vmdk'] = 'raw'
 
 ntfsdump(
     imagefile_path='./path/to/your/imagefile.raw',
