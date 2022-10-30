@@ -8,10 +8,12 @@
 
 ![ntfsdump logo](https://gist.githubusercontent.com/sumeshi/c2f430d352ae763273faadf9616a29e5/raw/baa85b045e0043914218cf9c0e1d1722e1e7524b/ntfsdump.svg)
 
-A tool for extract any files from an NTFS volume on an image file.
+A tool to extract any files/directories/ADSs directly from NTFS image files.
 
 
 ## Usage
+
+ntfsdump can be invoked from the shell or run from a Python script.
 
 ```bash
 $ ntfsdump {{query}} --output-path {{output_dir}} /path/to/imagefile.raw
@@ -37,8 +39,8 @@ ntfsdump(
 
 ### Query
 
-Basically, enter the windows path to the file you want to extract.
-The paths are separated by slashes.
+This tool searches and extracts file/directory/ADS path with regular expression queries.  
+Paths are separated by slashes(Unix/Linux-Style), not backslashes(Windows-Style).
 
 e.g.
 ```
