@@ -29,6 +29,7 @@ mypy = "^1.7.0"
 flake8 = "^6.1.0"
 poetry = "^1.1.13"
 pytest = "^7.0.1"
+nuitka = "^1.8.6"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
