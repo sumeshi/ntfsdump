@@ -78,7 +78,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          apt install patchelf
+          sudo apt install patchelf
           pip install poetry
           poetry install
 
