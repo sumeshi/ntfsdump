@@ -46,12 +46,14 @@ jobs:
           poetry run python -m nuitka --standalone --onefile --follow-imports -o ntfsdump.exe --output-dir=dist --assume-yes-for-downloads src/ntfsdump/views/NtfsDumpView.py
       
       - name: verify
-        run: dist/ntfsdump.exe -h
+        run: |
+          dist/ntfsdump.exe -h
+          dist/ntfsdump.exe --version
 
-      # - name: upload
-      #   uses: softprops/action-gh-release@v1
-      #   with:
-      #     files: dist/ntfsdump.exe
+      - name: upload
+        uses: actions/upload-artifact@v3
+        with:
+          files: dist/ntfsdump.exe
 
   build-linux:
     runs-on: ubuntu-latest
@@ -92,4 +94,11 @@ jobs:
           poetry run python -m nuitka --standalone --onefile --follow-imports -o ntfsdump --output-dir=dist --assume-yes-for-downloads src/ntfsdump/views/NtfsDumpView.py
       
       - name: verify
-        run: dist/ntfsdump -h
+        run: |
+          dist/ntfsdump -h
+          dist/ntfsdump --version
+
+      - name: upload
+        uses: actions/upload-artifact@v3
+        with:
+          files: dist/ntfsdump
