@@ -43,7 +43,7 @@ jobs:
       - name: build
         run: |
           pip install nuitka
-          nuitka --standalone --onefile --follow-imports -o ntfsdump.exe --output-dir=dist --assume-yes-for-downloads src/views/NtfsDumpView.py
+          nuitka --standalone --onefile --follow-imports -o ntfsdump.exe --output-dir=dist --assume-yes-for-downloads src/ntfsdump/views/NtfsDumpView.py
       
       - name: verify
         run: dist/ntfsdump.exe -h
@@ -89,7 +89,7 @@ jobs:
       - name: build
         run: |
           pip install nuitka
-          nuitka --standalone --onefile --follow-imports -o ntfsdump --output-dir=dist --assume-yes-for-downloads src/views/NtfsDumpView.py
+          nuitka --standalone --onefile --follow-imports -o ntfsdump --output-dir=dist --assume-yes-for-downloads src/ntfsdump/views/NtfsDumpView.py
       
       - name: verify
         run: dist/ntfsdump -h
