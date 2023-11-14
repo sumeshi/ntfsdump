@@ -11,5 +11,5 @@ RUN poetry install
 
 # you can rewrite this command when running the docker container.
 # ex. docker run --rm -v $(pwd):/app -t ntfsdump:latest '/$MFT' /app/sample.raw
-ENTRYPOINT ["python", "-m", "ntfsdump"]
+ENTRYPOINT ["python", "-m", "poetry", "run", "ntfsdump"]
 CMD ["-h"]
