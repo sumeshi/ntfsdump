@@ -1,5 +1,4 @@
 FROM python:3.11-bullseye
-WORKDIR /app
 
 # install dependencies
 RUN pip install -U pip && pip install poetry
