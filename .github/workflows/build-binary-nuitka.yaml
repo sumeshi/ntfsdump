@@ -52,7 +52,7 @@ jobs:
       - name: upload
         uses: actions/upload-artifact@v3
         with:
-          files: dist/ntfsdump.exe
+          path: dist/ntfsdump.exe
 
   build-linux:
     runs-on: ubuntu-latest
@@ -100,4 +100,4 @@ jobs:
       - name: upload
         uses: actions/upload-artifact@v3
         with:
-          files: dist/ntfsdump
+          path: dist/ntfsdump
