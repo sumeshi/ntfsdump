@@ -8,6 +8,8 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.create_tag.outputs.version }}
     strategy:
       matrix:
         python-version: ['3.11']
@@ -56,7 +58,7 @@ jobs:
           version=$(cat pyproject.toml | grep version | head -1 | awk -F '"' '{print $2}')
           git tag "v$version"
           git push origin "v$version"
-          echo "::set-output name=version::v$version"
+          echo "version=v$version" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
