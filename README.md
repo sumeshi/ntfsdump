@@ -1,6 +1,6 @@
 # ntfsdump
 
-[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
+[![LGPLv3+ License](http://img.shields.io/badge/license-LGPLv3+-blue.svg?style=flat)](LICENSE)
 [![PyPI version](https://badge.fury.io/py/ntfsdump.svg)](https://badge.fury.io/py/ntfsdump)
 [![Python Versions](https://img.shields.io/pypi/pyversions/ntfsdump.svg)](https://pypi.org/project/ntfsdump/)
 [![pytest](https://github.com/sumeshi/ntfsdump/actions/workflows/test.yaml/badge.svg)](https://github.com/sumeshi/ntfsdump/actions/workflows/test.yaml)
@@ -8,7 +8,6 @@
 ![ntfsdump logo](https://gist.githubusercontent.com/sumeshi/c2f430d352ae763273faadf9616a29e5/raw/baa85b045e0043914218cf9c0e1d1722e1e7524b/ntfsdump.svg)
 
 An efficient tool for extracting files, directories, and alternate data streams directly from NTFS image files.
-
 
 ## Usage
 
@@ -114,28 +113,16 @@ $ ntfsfind '.*\.evtx' ./path/to/your/imagefile.raw | ntfsdump ./path/to/your/ima
     Otherwise, the file is dumped with the filename specified in --output-path.
 ```
 
-## Prerequisites
-The image file to be processed must meet the following conditions:
+## Execution Environment
+You can run ntfsdump in the following environments:
 
-- The file format must be raw, e01, vhd, vhdx, or vmdk.
-- It must use the NTFS (NT File System).
-- It must have a GUID Partition Table (GPT).
+Windows: Precompiled binaries for Windows are available in the GitHub releases section.
 
-Additional file formats will be added in the future.  
-If you have any questions, please feel free to submit an issue.
+Ubuntu: Precompiled binaries for Linux are also available in the GitHub releases section.
 
+Python: If you prefer to run ntfsdump using Python, it is compatible with Python 3.11 and later versions (3.12 and above). 
 
-## LogFormat
-**ntfsdump** outputs logs in the following format.  
-By default, it outputs the files to the current directory, but if you do not need them, please use the `--nolog` option.
-
-```
-- ntfsdump v{{version}} - 
-2022-01-01T00:00:00.000000: [{{EventName}}] {{Description}}
-2022-01-01T00:00:00.000000: [{{EventName}}] {{Description}}
-2022-01-01T00:00:00.000000: [{{EventName}}] {{Description}}
-...
-```
+Make sure to choose the installation method that best suits your platform and requirements.
 
 ## Installation
 
@@ -155,6 +142,28 @@ $ ./ntfsdump {{options...}}
 
 ```bat
 > ntfsdump.exe {{options...}}
+```
+
+## NTFS File Prerequisites
+The image file to be processed must meet the following conditions:
+
+- The file format must be raw, e01, vhd, vhdx, or vmdk.
+- It must use the NTFS (NT File System).
+- It must have a GUID Partition Table (GPT).
+
+Additional file formats will be added in the future.  
+If you have any questions, please feel free to submit an issue.
+
+## Log Format
+**ntfsdump** outputs logs in the following format.  
+By default, it outputs the files to the current directory, but if you do not need them, please use the `--nolog` option.
+
+```
+- ntfsdump v{{version}} - 
+2022-01-01T00:00:00.000000: [{{EventName}}] {{Description}}
+2022-01-01T00:00:00.000000: [{{EventName}}] {{Description}}
+2022-01-01T00:00:00.000000: [{{EventName}}] {{Description}}
+...
 ```
 
 ## Contributing

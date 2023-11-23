@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ntfsdump"
 version = "2.5.0"
-description = "A tool for extract any files from an NTFS volume on an image file."
+description = "An efficient tool for extracting files, directories, and alternate data streams directly from NTFS image files."
 authors = ["sumeshi <sum3sh1@protonmail.com>"]
 license = "LGPLv3+"
 readme = "README.md"
@@ -15,7 +15,7 @@ keywords = ['Security', 'Forensics', 'DFIR', 'Windows', 'NTFS']
 ntfsdump = 'ntfsdump.views.NtfsDumpView:entry_point'
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 pytsk3 = "^20231007"
 libewf-python = "^20230212"
 libvmdk-python = "^20221124"
