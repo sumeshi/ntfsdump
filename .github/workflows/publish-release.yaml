@@ -1,4 +1,4 @@
-name: build-binary-nuitka
+name: publish-release
 
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
       - name: run python
         run: |
           poetry run ntfsdump -h
-
+      
       - name: build
         run: |
           pip install nuitka
@@ -48,13 +48,31 @@ jobs:
         run: |
           dist/ntfsdump.exe -h
           dist/ntfsdump.exe --version
+      
+      - name: create tag
+        id: create_tag
+        if: startsWith(github.ref, 'refs/heads/master')
+        run: |
+          version=$(cat pyproject.toml | grep version | head -1 | awk -F '"' '{print $2}')
+          git tag "v$version"
+          git push origin "v$version"
+          echo "::set-output name=version::v$version"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
 
-      - name: upload
-        uses: actions/upload-artifact@v3
+      - name: create release
+        uses: softprops/action-gh-release@v1
         with:
-          path: dist/ntfsdump.exe
+          tag_name: ${{ steps.create_tag.outputs.version }}
+          files: dist/ntfsdump.exe
+          name: Release ${{ steps.create_tag.outputs.version }}
+          body: 'Release description here'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux:
+    needs: build-windows
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -97,7 +115,10 @@ jobs:
           dist/ntfsdump -h
           dist/ntfsdump --version
 
-      - name: upload
-        uses: actions/upload-artifact@v3
+      - name: upload asset to release
+        uses: softprops/action-gh-release@v1
         with:
-          path: dist/ntfsdump
+          files: dist/ntfsdump
+          tag_name: ${{ needs.build-windows.outputs.tag_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
