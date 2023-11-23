@@ -67,7 +67,7 @@ jobs:
           tag_name: ${{ steps.create_tag.outputs.version }}
           files: dist/ntfsdump.exe
           name: Release ${{ steps.create_tag.outputs.version }}
-          body: 'Release description here'
+          body: 'This release was automatically created by GitHub Actions.'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -118,7 +118,7 @@ jobs:
       - name: upload asset to release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ needs.build-windows.outputs.version }}
           files: dist/ntfsdump
-          tag_name: ${{ needs.build-windows.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
