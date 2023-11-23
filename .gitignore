@@ -133,5 +133,7 @@ dmypy.json
 **/*.tgs
 **/*.E01
 
+NtfsDumpView.*/
+
 /tests/ntfsdump/cache/*
 !/tests/ntfsdump/cache/.gitkeep

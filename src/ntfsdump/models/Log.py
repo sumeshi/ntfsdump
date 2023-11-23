@@ -2,13 +2,13 @@
 from pathlib import Path
 from typing import Literal
 from traceback import format_exc
-from datetime import datetime
+from datetime import datetime, UTC
 
 from ntfsdump.models.MetaData import MetaData
 
 
 def get_datetime() -> datetime:
-    return datetime.utcnow()
+    return datetime.now(UTC)
 
 def get_logfile_time():
     if not MetaData.run_time:

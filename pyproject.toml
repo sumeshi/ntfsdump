@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ntfsdump"
-version = "2.4.0"
-description = "A tool for extract any files from an NTFS volume on an image file."
+version = "2.5.0"
+description = "An efficient tool for extracting files, directories, and alternate data streams directly from NTFS image files."
 authors = ["sumeshi <sum3sh1@protonmail.com>"]
 license = "LGPLv3+"
 readme = "README.md"
@@ -9,24 +9,27 @@ readme = "README.md"
 repository = "https://github.com/sumeshi/ntfsdump"
 homepage = "https://github.com/sumeshi/ntfsdump"
 
-keywords = ['Windows']
+keywords = ['Security', 'Forensics', 'DFIR', 'Windows', 'NTFS']
 
 [tool.poetry.scripts]
 ntfsdump = 'ntfsdump.views.NtfsDumpView:entry_point'
 
 [tool.poetry.dependencies]
-python = "^3.9"
-pytsk3 = "^20211111"
-libewf-python = "^20201230"
-libvmdk-python = "^20210807"
-libvhdi-python = "^20210425"
+python = "^3.11"
+pytsk3 = "^20231007"
+libewf-python = "^20230212"
+libvmdk-python = "^20221124"
+libvhdi-python = "^20221124"
+poetry = "^1.7.0"
+pytest = "^7.4.3"
 
-[tool.poetry.dev-dependencies]
-black = "^22.1.0"
-mypy = "^0.931"
-flake8 = "^4.0.1"
+[tool.poetry.group.dev.dependencies]
+black = "^23.11.0"
+mypy = "^1.7.0"
+flake8 = "^6.1.0"
 poetry = "^1.1.13"
 pytest = "^7.0.1"
+nuitka = "^1.8.6"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
