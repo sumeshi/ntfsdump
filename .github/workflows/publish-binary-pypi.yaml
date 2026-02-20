@@ -1,8 +1,9 @@
 name: publish-binary-pypi
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      - master
 
 jobs:
   publish:
