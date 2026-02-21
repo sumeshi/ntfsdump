@@ -19,6 +19,7 @@ An efficient tool for extracting files, directories, and alternate data streams 
 - **Support Multiple Formats**: Read from `.raw`, `.e01`, `.vhd`, `.vhdx`, and `.vmdk`.
 - **Recursive Directory Dumping**: Extract entire folders seamlessly.
 - **Alternate Data Stream (ADS)**: Supports extracting hidden alternate data streams.
+- **Intelligent Path Reconstruction**: When outputting single files embedded deep in directories with an absolute path (e.g. `\Windows\System32...`), `ntfsdump` reconstructs the directory structure in the output destination folder to keep artifacts perfectly organized.
 - **Glob & Wildcard Queries**: Basic support for extracting matched artifacts (e.g. `.*`).
 - **Use as a CLI or Python Module**: Highly flexible to integrate into other automated tools.
 
@@ -62,6 +63,7 @@ ntfsdump [OPTIONS] <IMAGE> [PATHS...]
 - `--version`, `-V`: Display program version.
 - `--quiet`, `-q`: Suppress stdout output.
 - `--no-log`: Prevent log file creation.
+- `--flat`: Extract all artifacts purely into a single folder without reconstructing directories.
 - `--volume`, `-n`: Target specific NTFS volume number (default: auto-detects main OS volume).
 - `--format`, `-f`: Image file format (default: `raw`). Options: `raw`, `e01`, `vhd`, `vhdx`, `vmdk`.
 - `--output`, `-o`: Directory or file to save exported outputs.
@@ -85,8 +87,9 @@ ntfsdump --format=e01 -o ./dump ./path/to/your/image.E01 /Windows/System32/winev
 
 Using with [ntfsfind](https://github.com/sumeshi/ntfsfind) over standard input (pipe):
 ```bash
-ntfsfind '.*\.evtx' ./image.raw | ntfsdump ./image.raw
+ntfsfind '.*\.evtx' ./image.raw | ntfsdump -o ./dump ./image.raw
 ```
+*Note: Any absolute path (starting with `/` or `\`) passed over stdin via tools like `ntfsfind` will automatically be cleaned, and the folder hierarchy will be rebuilt faithfully inside your local output directory (`./dump/Windows/System32/winevt/Logs/System.evtx`).*
 
 ### Python Module
 

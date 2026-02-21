@@ -10,7 +10,8 @@ def ntfsdump(
     paths: list[str],
     output: Union[str, Path] = ".",
     volume: Optional[int] = None,
-    format: str = "raw"
+    format: str = "raw",
+    flat: bool = False
 ) -> None:
     """A tool for extracting files from an NTFS volume on an image file.
 
@@ -25,4 +26,4 @@ def ntfsdump(
     output_dir = Path(output).resolve()
     
     for query in paths:
-        img.main_volume.dump_files(query, output_dir)
+        img.main_volume.dump_files(query, output_dir, flat)

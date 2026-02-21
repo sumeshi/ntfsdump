@@ -27,7 +27,10 @@ class NtfsVolume:
         self.fs_info = fs_info
     
     def __clean_query(self, query: str) -> str:
-        return query.replace('\\', '/')
+        cleaned = query.replace('\\', '/')
+        if not cleaned.startswith('/'):
+            cleaned = '/' + cleaned
+        return cleaned
     
     def __is_dir(self, query: str) -> bool:
         f = self.fs_info.open(query)
@@ -97,29 +100,26 @@ class NtfsVolume:
 
         # destination path is a file
         try:
+            destination_path.parent.mkdir(parents=True, exist_ok=True)
             destination_path.write_bytes(content)
             logger.log(f"[dumped] {destination_path}", 'info')
 
         # destination path is a directory
         except IsADirectoryError:
             target = destination_path / filename
+            target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(content)
             logger.log(f"[dumped] {target}", 'info')
 
-    def dump_files(self, query: str, destination_path: Path) -> None:
+    def dump_files(self, query: str, destination_path: Path, flat: bool = False) -> None:
         query = self.__clean_query(query)
         logger.log(f"[query] {query}", 'system')
 
         if self.__is_dir(query):
             for artifact in self.__list_artifacts(query):
                 newquery = str(Path(query) / artifact)
-                newdestination_path = destination_path / Path(query).name
-
-                # create directory
-                newdestination_path.mkdir(parents=True, exist_ok=True)
-
                 # recursive dump
-                self.dump_files(query=newquery, destination_path=newdestination_path)
+                self.dump_files(query=newquery, destination_path=destination_path, flat=flat)
 
         elif self.__is_file(query):
             filename = Path(query).name
@@ -135,7 +135,12 @@ class NtfsVolume:
             if destination_path.name == filename:
                 self.__write_file(destination_path, content, filename)
             else:
-                self.__write_file(destination_path / filename, content, filename)
+                if flat:
+                    self.__write_file(destination_path / filename, content, filename)
+                else:
+                    # Always recreate the directory tree using relative path
+                    q_path = Path(query.lstrip('/'))
+                    self.__write_file(destination_path / q_path, content, filename)
         
         elif query.endswith('.*'):
             base_query = query.replace('.*', '')
@@ -148,13 +153,20 @@ class NtfsVolume:
             ]
             for file in files:
                 newquery = str(Path(parent_dir) / file)
-                self.dump_files(query=newquery, destination_path=destination_path.parent)
+                self.dump_files(query=newquery, destination_path=destination_path, flat=flat)
 
         else:
             try:
                 filename = Path(query).name
                 content = self.__read_file(query)
-                self.__write_file(destination_path, content, filename)
+                if destination_path.name == filename:
+                    self.__write_file(destination_path, content, filename)
+                else:
+                    if flat:
+                        self.__write_file(destination_path / filename, content, filename)
+                    else:
+                        q_path = Path(query.lstrip('/'))
+                        self.__write_file(destination_path / q_path, content, filename)
             except Exception as e:
                 logger.log(f"[error] {query}", 'danger')
                 logger.log(str(e), 'danger')

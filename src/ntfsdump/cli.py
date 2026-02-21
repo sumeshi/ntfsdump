@@ -22,6 +22,9 @@ def create_parser() -> argparse.ArgumentParser:
         "--no-log", action="store_true", help="prevent log file creation."
     )
     parser.add_argument(
+        "--flat", action="store_true", help="save files flatly instead of reconstructing the tree (default: False)."
+    )
+    parser.add_argument(
         "--output", "-o", type=str, default=".",
         help="output destination directory or file path (default: current dir '.')."
     )
@@ -79,6 +82,7 @@ def main():
         output=args.output,
         volume=args.volume,
         format=args.format,
+        flat=args.flat,
     )
 
 if __name__ == "__main__":
