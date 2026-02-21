@@ -33,15 +33,7 @@ jobs:
       
       - name: build
         run: |
-          uv run python -m nuitka \
-            --standalone \
-            --onefile \
-            --follow-imports \
-            --include-distribution-metadata=ntfsdump \
-            -o ntfsdump.exe \
-            --output-dir=dist \
-            --assume-yes-for-downloads \
-            src/ntfsdump/cli.py
+          uv run python -m nuitka --standalone --onefile --follow-imports --include-distribution-metadata=ntfsdump -o ntfsdump.exe --output-dir=dist --assume-yes-for-downloads src/ntfsdump/cli.py
 
       
       - name: verify
@@ -106,15 +98,7 @@ jobs:
 
       - name: build
         run: |
-          uv run python -m nuitka \
-            --standalone \
-            --onefile \
-            --follow-imports \
-            --include-distribution-metadata=ntfsdump \
-            -o ntfsdump \
-            --output-dir=dist \
-            --assume-yes-for-downloads \
-            src/ntfsdump/cli.py
+          uv run python -m nuitka --standalone --onefile --follow-imports --include-distribution-metadata=ntfsdump -o ntfsdump --output-dir=dist --assume-yes-for-downloads src/ntfsdump/cli.py
       
       - name: verify
         run: |
