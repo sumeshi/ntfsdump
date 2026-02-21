@@ -12,7 +12,7 @@ jobs:
       version: ${{ steps.create_tag.outputs.version }}
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.13']
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -22,29 +22,27 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       
-      - name: replace version
-        run: |
-          from pathlib import Path
-          version = [l for l in Path('pyproject.toml').read_text().splitlines() if 'version' in l][0].split(' ')[-1].strip('\"')
-          f = Path('src/ntfsdump/models/MetaData.py')
-          text = f.read_text().replace("get_version(name)", f"\'{version}\'")
-          f.write_text(text)
-        shell: python
-
       - name: Install dependencies
         run: |
-          pip install poetry
-          poetry config virtualenvs.in-project true
-          poetry install
+          pip install uv
+          uv sync
 
       - name: run python
         run: |
-          poetry run ntfsdump -h
+          uv run ntfsdump -h
       
       - name: build
         run: |
-          pip install nuitka
-          poetry run python -m nuitka --standalone --onefile --follow-imports -o ntfsdump.exe --output-dir=dist --assume-yes-for-downloads src/ntfsdump/views/NtfsDumpView.py
+          uv run python -m nuitka \
+            --standalone \
+            --onefile \
+            --follow-imports \
+            --include-distribution-metadata=ntfsdump \
+            -o ntfsdump.exe \
+            --output-dir=dist \
+            --assume-yes-for-downloads \
+            src/ntfsdump/cli.py
+
       
       - name: verify
         run: |
@@ -55,7 +53,7 @@ jobs:
         id: create_tag
         if: startsWith(github.ref, 'refs/heads/master')
         run: |
-          version=$(cat pyproject.toml | grep version | head -1 | awk -F '"' '{print $2}')
+          version=$(grep '__version__' src/ntfsdump/__about__.py | awk -F '"' '{print $2}')
           git tag "v$version"
           git push origin "v$version"
           echo "version=v$version" >> $GITHUB_OUTPUT
@@ -78,7 +76,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.13']
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -88,29 +86,29 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       
-      - name: replace version
-        run: |
-          from pathlib import Path
-          version = [l for l in Path('pyproject.toml').read_text().splitlines() if 'version' in l][0].split(' ')[-1].strip('\"')
-          f = Path('src/ntfsdump/models/MetaData.py')
-          text = f.read_text().replace("get_version(name)", f"\'{version}\'")
-          f.write_text(text)
-        shell: python
+
 
       - name: Install dependencies
         run: |
           sudo apt install patchelf
-          pip install poetry
-          poetry install
+          pip install uv
+          uv sync
 
       - name: run python
         run: |
-          poetry run ntfsdump -h
+          uv run ntfsdump -h
 
       - name: build
         run: |
-          pip install nuitka
-          poetry run python -m nuitka --standalone --onefile --follow-imports -o ntfsdump --output-dir=dist --assume-yes-for-downloads src/ntfsdump/views/NtfsDumpView.py
+          uv run python -m nuitka \
+            --standalone \
+            --onefile \
+            --follow-imports \
+            --include-distribution-metadata=ntfsdump \
+            -o ntfsdump \
+            --output-dir=dist \
+            --assume-yes-for-downloads \
+            src/ntfsdump/cli.py
       
       - name: verify
         run: |

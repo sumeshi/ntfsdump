@@ -47,6 +47,6 @@ def prepare_ntfsfile():
     yield
     # teardown
     ## remove cache files
-    cachedir = Path(__file__).parent / Path('cache')
-    for file in cachedir.glob('**/*[!.gitkeep]'):
-        file.unlink()
+    # cachedir = Path(__file__).parent / Path('cache')
+    # for file in cachedir.glob('**/*[!.gitkeep]'):
+    #     file.unlink()

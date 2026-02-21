@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.12']
+        python-version: ['3.13']
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -22,10 +22,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: setup poetry
+      - name: setup uv
         run: |
-          pip install poetry
-          poetry install --no-interaction
+          pip install uv
+          uv sync
 
       - name: run tests
-        run: poetry run pytest
+        run: uv run pytest
