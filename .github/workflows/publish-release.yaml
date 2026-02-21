@@ -56,17 +56,23 @@ jobs:
           version=$(grep '__version__' src/ntfsdump/__about__.py | awk -F '"' '{print $2}')
           git tag "v$version"
           git push origin "v$version"
-          echo "version=v$version" >> $GITHUB_OUTPUT
+          echo "version=$version" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
 
+      - name: rename asset
+        if: startsWith(github.ref, 'refs/heads/master')
+        run: mv dist/ntfsdump.exe dist/ntfsdump-windows-x64-v${{ steps.create_tag.outputs.version }}.exe
+        shell: bash
+
       - name: create release
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/heads/master')
         with:
-          tag_name: ${{ steps.create_tag.outputs.version }}
-          files: dist/ntfsdump.exe
-          name: Release ${{ steps.create_tag.outputs.version }}
+          tag_name: v${{ steps.create_tag.outputs.version }}
+          files: dist/ntfsdump-windows-x64-v${{ steps.create_tag.outputs.version }}.exe
+          name: Release v${{ steps.create_tag.outputs.version }}
           body: 'This release was automatically created by GitHub Actions.'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -115,10 +121,16 @@ jobs:
           dist/ntfsdump -h
           dist/ntfsdump --version
 
+      - name: rename asset
+        if: startsWith(github.ref, 'refs/heads/master')
+        run: mv dist/ntfsdump dist/ntfsdump-linux-x64-v${{ needs.build-windows.outputs.version }}
+        shell: bash
+
       - name: upload asset to release
+        if: startsWith(github.ref, 'refs/heads/master')
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build-windows.outputs.version }}
-          files: dist/ntfsdump
+          tag_name: v${{ needs.build-windows.outputs.version }}
+          files: dist/ntfsdump-linux-x64-v${{ needs.build-windows.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
