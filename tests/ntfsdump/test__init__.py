@@ -28,9 +28,9 @@ def test_ntfsdump(query: str, hash_list: set[str]):
     cachedir = Path(__file__).parent / 'cache'
 
     ntfsdump(
-        imagefile_path=cachedir / 'ntfs.raw',
-        output_path=cachedir,
-        target_queries=[query],
+        image=cachedir / 'ntfs.raw',
+        paths=[query],
+        output=cachedir,
     )
     created_files = cachedir.glob('**/*[!raw]')
     cache_hash_list = {calc_md5(f) for f in created_files}

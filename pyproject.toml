@@ -1,36 +1,41 @@
-[tool.poetry]
+[project]
 name = "ntfsdump"
-version = "2.5.3"
+dynamic = ["version"]
 description = "An efficient tool for extracting files, directories, and alternate data streams directly from NTFS image files."
-authors = ["sumeshi <sum3sh1@protonmail.com>"]
-license = "LGPLv3+"
 readme = "README.md"
+license = "LGPL-3.0-or-later"
+authors = [
+    { name = "sumeshi", email = "sum3sh1@protonmail.com" }
+]
+requires-python = ">=3.13"
 
-repository = "https://github.com/sumeshi/ntfsdump"
-homepage = "https://github.com/sumeshi/ntfsdump"
-
-keywords = ['Security', 'Forensics', 'DFIR', 'Windows', 'NTFS']
-
-[tool.poetry.scripts]
-ntfsdump = 'ntfsdump.views.NtfsDumpView:entry_point'
-
-[tool.poetry.dependencies]
-python = "^3.11"
-pytsk3 = "^20231007"
-libewf-python = "^20230212"
-libvmdk-python = "^20221124"
-libvhdi-python = "^20221124"
-poetry = "^1.7.0"
-pytest = "^7.4.3"
-
-[tool.poetry.group.dev.dependencies]
-black = "^23.11.0"
-mypy = "^1.7.0"
-flake8 = "^6.1.0"
-poetry = "^1.1.13"
-pytest = "^7.0.1"
-nuitka = "^1.8.6"
+dependencies = [
+    "pytsk3",
+    "libewf-python",
+    "libvmdk-python",
+    "libvhdi-python",
+]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/ntfsdump/__about__.py"
+
+[project.urls]
+Homepage = "https://github.com/sumeshi/ntfsdump"
+Repository = "https://github.com/sumeshi/ntfsdump"
+
+[dependency-groups]
+dev = [
+    "black",
+    "mypy",
+    "flake8",
+    "pytest",
+    "nuitka",
+    "zstandard>=0.25.0",
+]
+
+[project.scripts]
+ntfsdump = 'ntfsdump.cli:main'
