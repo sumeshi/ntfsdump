@@ -41,11 +41,35 @@ class NtfsVolume:
         return f.info.name.type == pytsk3.TSK_FS_NAME_TYPE_REG
     
     def __list_artifacts(self, query: str) -> List[str]:
-        # return artifacts without current and parent dir
-        return [
-            a.info.name.name.decode('utf-8') for a in self.fs_info.open_dir(query) 
-            if a.info.name.name.decode('utf-8') not in ['.', '..']
-        ]
+        results: List[str] = []
+        for a in self.fs_info.open_dir(query):
+            name = a.info.name.name.decode('utf-8', errors='replace')
+            if name in ('.', '..'):
+                continue
+
+            # Skip deleted/unallocated name entries — these are leftovers in
+            # the directory index that no longer represent a live file.
+            if not (a.info.name.flags & pytsk3.TSK_FS_NAME_FLAG_ALLOC):
+                logger.log(f"[skipped:deleted] {query}/{name}", 'system')
+                continue
+
+            # Skip entries whose MFT record has been reused. The name still
+            # points at MFT record N, but record N now belongs to a different
+            # file (different sequence number), so reading it would return
+            # unrelated content (e.g. jpg/png under Prefetch).
+            if a.info.meta is None:
+                logger.log(f"[skipped:no-meta] {query}/{name}", 'system')
+                continue
+            if a.info.name.meta_seq != a.info.meta.seq:
+                logger.log(
+                    f"[skipped:mft-reused] {query}/{name} "
+                    f"(name_seq={a.info.name.meta_seq}, meta_seq={a.info.meta.seq})",
+                    'system',
+                )
+                continue
+
+            results.append(name)
+        return results
     
     def __read_file(self, query: str) -> bytes:
         f = self.fs_info.open(query)
