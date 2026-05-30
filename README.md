@@ -1,6 +1,6 @@
 # ntfsdump
 
-[![LGPLv3+ License](http://img.shields.io/badge/license-LGPLv3+-blue.svg?style=flat)](LICENSE)
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 [![PyPI version](https://badge.fury.io/py/ntfsdump.svg)](https://badge.fury.io/py/ntfsdump)
 [![Python Versions](https://img.shields.io/pypi/pyversions/ntfsdump.svg)](https://pypi.org/project/ntfsdump/)
 [![pytest](https://github.com/sumeshi/ntfsdump/actions/workflows/test.yaml/badge.svg)](https://github.com/sumeshi/ntfsdump/actions/workflows/test.yaml)
@@ -9,46 +9,41 @@
 
 An efficient tool for extracting files, directories, and alternate data streams directly from NTFS image files.
 
-## 🚀 Overview
+## Overview
 
-`ntfsdump` allows digital forensic investigators and incident responders to seamlessly extract records from disk images without needing to mount them. By leveraging powerful backend libraries like `pytsk3` and `libyal`, it supports reading from standard disk image formats (RAW, E01, VHD(x), VMDK) and reliably dumps NTFS structures.
+`ntfsdump` is a command-line tool and Python library for extracting files, directories, and alternate data streams from NTFS volumes in disk images without mounting them.
 
-## 📦 Features
+It supports common forensic image formats such as RAW, E01, VHD/VHDX, and VMDK through `pytsk3` and `libyal-based libraries`.
 
-- **Direct Extraction**: Avoid mounting overhead by extracting files directly from NTFS partitions.
-- **Support Multiple Formats**: Read from `.raw`, `.e01`, `.vhd`, `.vhdx`, and `.vmdk`.
-- **Recursive Directory Dumping**: Extract entire folders seamlessly.
-- **Alternate Data Stream (ADS)**: Supports extracting hidden alternate data streams.
-- **Intelligent Path Reconstruction**: When outputting single files embedded deep in directories with an absolute path (e.g. `\Windows\System32...`), `ntfsdump` reconstructs the directory structure in the output destination folder to keep artifacts perfectly organized.
-- **Glob & Wildcard Queries**: Basic support for extracting matched artifacts (e.g. `.*`).
-- **Use as a CLI or Python Module**: Highly flexible to integrate into other automated tools.
+## Features
 
-## ⚙️ Execution Environment
-
-- **Python**: Compatible with Python 3.13+.
-- **Precompiled Binaries**: Available for both Windows and Linux in the [GitHub releases](https://github.com/sumeshi/ntfsdump/releases) section.
+- Extract files directly from NTFS volumes in disk images
+- Dump a single file, multiple files, or an entire directory recursively
+- Extract alternate data streams (ADS)
+- Reconstruct the original directory structure in the output directory
+- Support RAW, E01, VHD, VHDX, and VMDK images
+- Read paths from standard input for integration with tools such as `ntfsfind`
+- Use as a command-line tool or Python library
 
 
-## 📂 Installation
+## Installation
 
 ```bash
 # From PyPI
 pip install ntfsdump
 
-# Form GitHub Releases (Precompiled Binaries)
+# From GitHub Releases (Precompiled Binaries)
 chmod +x ./ntfsdump
 ./ntfsdump --help
 ```
 
-## 🛠️ Requirements & File Prerequisites
+## Supported Input
 
-The image file must meet the following conditions:
-- **Formats**: `raw`, `e01`, `vhd`, `vhdx`, `vmdk`.
-- **File System**: `NTFS`.
-- **Partition Table**: `GPT` (MBR will usually be auto-detected, but GPT is officially supported).
+- Image formats: `RAW`, `E01`, `VHD`, `VHDX`, `VMDK`
+- File system: NTFS`
+- Partition tables: GPT is supported; MBR may be auto-detected depending on the image
 
-
-## 💻 Usage
+## Usage
 
 ### Command Line Interface
 
@@ -107,29 +102,55 @@ ntfsdump(
 )
 ```
 
-## 🔍 Query Syntax
+## Query Syntax
 
-**`ntfsdump` utilizes UNIX-like path separators (`/`) for queries.** Paths are case-sensitive relative to the target volume structure.
+`ntfsdump` uses UNIX-like path separators (`/`) for queries. Depending on the image and backend behavior, path matching may be case-sensitive.
+
 - **File**: `/$MFT` -> extracts `$MFT`
 - **ADS**: `/$Extend/$UsnJrnl:$J` -> extracts the `$J` ADS file from `$UsnJrnl`.
 - **Directory**: `/Windows/System32/winevt/Logs` -> extracts all event logs recursively.
 - **Prefix Expansion**: `/Windows/Prefetch/.*` -> extracts all files located in the `Prefetch` dir.
 
-## 📝 Logs
+## Logs
 
 By default, an execution log (e.g. `ntfsdump_20240101_153205_1234.log`) is generated in the current directory to safely record which files were successfully dumped or failed.
 *To disable logging entirely, append the `--no-log` flag.*
 
-## 🤝 Contributing
+## Contributing
 
 We welcome reports, issues, and feature requests. Please do so on the [GitHub repository](https://github.com/sumeshi/ntfsdump). :sushi: :sushi: :sushi:
 
-## 📜 License
+## License
 
-Released under the [LGPLv3+](LICENSE) License.
+ntfsdump is released under the [MIT](LICENSE) License.
 
 Powered by:
 - [pytsk](https://github.com/py4n6/pytsk)
 - [libewf](https://github.com/libyal/libewf)
 - [libvhdi](https://github.com/libyal/libvhdi)
 - [libvmdk](https://github.com/libyal/libvmdk)
+
+### Third-party licenses
+
+The standalone binaries distributed via GitHub Releases bundle the following third-party libraries.
+
+#### LGPL-3.0-or-later
+
+The following libyal libraries are licensed under the [GNU Lesser General Public License v3.0 or later (LGPL-3.0-or-later)](https://www.gnu.org/licenses/lgpl-3.0.html).
+You may obtain, modify, and rebuild them from their upstream sources in accordance with the LGPL.
+
+- [libewf / libewf-python](https://github.com/libyal/libewf)
+  - Bundled version: [`libewf-python==20240506`](https://pypi.org/project/libewf-python/20240506/) (source: https://github.com/libyal/libewf/releases/tag/20240506)
+  - License text: https://github.com/libyal/libewf/blob/main/COPYING.LESSER
+- [libvhdi / libvhdi-python](https://github.com/libyal/libvhdi)
+  - Bundled version: [`libvhdi-python==20251119`](https://pypi.org/project/libvhdi-python/20251119/) (source: https://github.com/libyal/libvhdi/releases/tag/20251119)
+  - License text: https://github.com/libyal/libvhdi/blob/main/COPYING.LESSER
+- [libvmdk / libvmdk-python](https://github.com/libyal/libvmdk)
+  - Bundled version: [`libvmdk-python==20240510`](https://pypi.org/project/libvmdk-python/20240510/) (source: https://github.com/libyal/libvmdk/releases/tag/20240510)
+  - License text: https://github.com/libyal/libvmdk/blob/main/COPYING.LESSER
+
+#### Apache-2.0
+
+- [pytsk / pytsk3](https://github.com/py4n6/pytsk) — licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+  - Bundled version: [`pytsk3==20250801`](https://pypi.org/project/pytsk3/20250801/)
+  - License text: https://github.com/py4n6/pytsk/blob/master/LICENSE

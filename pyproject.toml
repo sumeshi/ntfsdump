@@ -3,17 +3,17 @@ name = "ntfsdump"
 dynamic = ["version"]
 description = "An efficient tool for extracting files, directories, and alternate data streams directly from NTFS image files."
 readme = "README.md"
-license = "LGPL-3.0-or-later"
+license = "MIT"
 authors = [
     { name = "sumeshi", email = "sum3sh1@protonmail.com" }
 ]
 requires-python = ">=3.13"
 
 dependencies = [
-    "pytsk3",
-    "libewf-python",
-    "libvmdk-python",
-    "libvhdi-python",
+    "pytsk3==20260520",
+    "libewf-python==20240506",
+    "libvmdk-python==20240510",
+    "libvhdi-python==20251119",
 ]
 
 [build-system]
