@@ -1,7 +1,7 @@
 [project]
 name = "ntfsdump"
 dynamic = ["version"]
-description = "An efficient tool for extracting files, directories, and alternate data streams directly from NTFS image files."
+description = "A command-line tool for efficiently extracting files, directories, and alternate data streams directly from NTFS image files."
 readme = "README.md"
 license = "MIT"
 authors = [
@@ -29,11 +29,11 @@ Repository = "https://github.com/sumeshi/ntfsdump"
 
 [dependency-groups]
 dev = [
-    "black",
-    "mypy",
-    "flake8",
-    "pytest",
-    "nuitka",
+    "black>=26.5.1",
+    "flake8>=7.3.0",
+    "mypy>=2.1.0",
+    "nuitka>=4.1.2",
+    "pytest>=9.0.3",
     "zstandard>=0.25.0",
 ]
 
