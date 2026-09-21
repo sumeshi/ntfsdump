@@ -5,7 +5,16 @@ import pytest
 
 from ntfsdump.errors import NtfsDumpError
 from ntfsdump.image import is_ntfs_volume_description
-from ntfsdump.sources import FileSource, SourceResolver, VmwareSource
+from ntfsdump.sources import (
+    EwfSource,
+    FileSource,
+    RawSource,
+    SourceResolver,
+    VhdSource,
+    VhdxSource,
+    VmdkSource,
+    VmwareSource,
+)
 
 SECTOR = 512
 FIXTURES = Path(__file__).parent / 'fixtures' / 'vmware'
@@ -149,3 +158,32 @@ def test_snapshot_option_rejected_for_plain_file(tmp_path: Path):
 
     with pytest.raises(NtfsDumpError, match="VMware SOURCE"):
         SourceResolver().resolve(image, snapshot='1')
+
+
+@pytest.mark.parametrize('image_format, expected', [
+    ('raw', RawSource),
+    ('e01', EwfSource),
+    ('vhd', VhdSource),
+    ('vhdx', VhdxSource),
+    ('vmdk', VmdkSource),
+])
+def test_resolver_returns_format_specific_source(
+    tmp_path: Path, image_format: str, expected
+):
+    image = tmp_path / 'image.bin'
+    image.write_bytes(b'\x00' * 64)
+
+    source = SourceResolver().resolve(image, image_format=image_format)
+
+    assert type(source) is expected
+    assert source.format == image_format
+
+
+def test_resolver_detects_avhdx_as_vhdx_source(tmp_path: Path):
+    image = tmp_path / 'Disk_0.avhdx'
+    image.write_bytes(b'vhdxfile' + b'\x00' * 64)
+
+    source = SourceResolver().resolve(image)
+
+    assert isinstance(source, VhdxSource)
+    assert source.format == 'vhdx'

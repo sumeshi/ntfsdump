@@ -36,6 +36,9 @@ examples:
 
   ntfsdump image.raw /$MFT --log ./case.log
       enable logging to an explicit file (logging is disabled by default).
+
+  ntfsdump ./HyperVM/Disk_0.avhdx /$MFT
+      read a Hyper-V checkpoint chain (VHDX/AVHDX) without merging it.
 """
 
 

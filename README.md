@@ -27,6 +27,7 @@ It supports common forensic image formats such as RAW, E01, VHD/VHDX, and VMDK t
 - Lists and reads VMware snapshots (`--list-snapshots`, `--snapshot`)
 - Selects a virtual disk when a VM has more than one (`--list-disks`, `--disk`)
 - Reads split VMDK extents and VMDK snapshot/delta chains without merging them
+- Reads Hyper-V checkpoint chains (`VHDX`/`AVHDX` differencing disks) without merging or converting them
 - Read paths from standard input for integration with tools such as `ntfsfind`
 - Use as a command-line tool or Python library
 
@@ -45,7 +46,7 @@ chmod +x ./ntfsdump
 
 ## Supported Input
 
-- Image formats: `RAW`, `E01`, `VHD`, `VHDX`, `VMDK` (auto-detected), plus VMware VM directories, VMX and VMSD
+- Image formats: `RAW`, `E01`, `VHD`, `VHDX` (including Hyper-V `AVHDX` differencing disks), `VMDK` (auto-detected), plus VMware VM directories, VMX and VMSD
 - File system: `NTFS`
 - Partition tables: GPT and MBR are both supported
 
@@ -67,6 +68,7 @@ disk.raw
 evidence.E01
 disk.vhd
 disk.vhdx
+disk.avhdx
 disk.vmdk
 vm.vmsd
 /path/to/vm/
@@ -178,6 +180,20 @@ ntfsfind '.*\.evtx' ./image.raw | ntfsdump -o ./dump ./image.raw
 ```
 
 *Note: Any absolute path (starting with `/` or `\`) passed over stdin via tools like `ntfsfind` will automatically be cleaned, and the folder hierarchy will be rebuilt faithfully inside your local output directory (`./dump/Windows/System32/winevt/Logs/System.evtx`).*
+
+#### Hyper-V checkpoints (VHDX/AVHDX)
+
+`ntfsdump` can read Hyper-V checkpoint (differencing disk) chains directly. Both a base `VHDX` and an `AVHDX` differencing disk are auto-detected, and either can be passed as `SOURCE`:
+
+```bash
+ntfsdump ./HyperVM/Disk_0.avhdx /$MFT
+ntfsdump ./HyperVM/Disk_0.avhdx /Windows/System32/config/SYSTEM
+```
+
+- The parent chain is resolved automatically from the VHDX metadata (parent locator), so pointing at any disk in the chain reads the whole chain as one logical disk.
+- Parent images are looked up next to the child image; absolute Windows parent paths are reduced to their basename.
+- Images are never merged or converted — nothing is written to the source directory.
+- Checkpoint listing (`--list-checkpoints`) is not yet available, and `-s` / `--snapshot` remains VMware-only.
 
 
 ### Python Module

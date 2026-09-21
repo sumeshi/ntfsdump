@@ -33,6 +33,49 @@ class FileSource(Source):
         return handler.get_img_info(str(self.path))
 
 
+class RawSource(FileSource):
+    """A raw disk image."""
+
+    format = 'raw'
+
+
+class EwfSource(FileSource):
+    """An EWF/E01 image (possibly split across multiple segments)."""
+
+    format = 'e01'
+
+
+class VhdSource(FileSource):
+    """A VHD image (conectix)."""
+
+    format = 'vhd'
+
+
+class VhdxSource(FileSource):
+    """A VHDX/AVHDX source, chain-aware for Hyper-V differencing disks.
+
+    Mirrors :class:`VmdkSource`: the parent (checkpoint) chain is resolved
+    from the VHDX metadata without merging or converting the image.
+    """
+
+    format = 'vhdx'
+
+
+class VmdkSource(FileSource):
+    """A VMDK source, chain-aware for split extents and snapshot chains."""
+
+    format = 'vmdk'
+
+
+_SOURCE_CLASSES = {
+    'raw': RawSource,
+    'e01': EwfSource,
+    'vhd': VhdSource,
+    'vhdx': VhdxSource,
+    'vmdk': VmdkSource,
+}
+
+
 class VmwareSource(Source):
     """A VMware VM directory, VMX or VMSD resolved into a logical disk."""
 
@@ -109,7 +152,10 @@ class SourceResolver:
             )
 
         resolved_format = self._resolve_format(path, image_format)
-        return FileSource(path, resolved_format)
+        source_cls = _SOURCE_CLASSES.get(resolved_format)
+        if source_cls is None:
+            raise NtfsDumpError(f"Unknown image format: {resolved_format}")
+        return source_cls(path, resolved_format)
 
     def _resolve_format(self, path: Path, image_format: Optional[str]) -> str:
         if image_format is not None:

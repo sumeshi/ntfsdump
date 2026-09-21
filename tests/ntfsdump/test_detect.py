@@ -5,7 +5,7 @@ import pytest
 
 from ntfsdump.errors import NtfsDumpError
 from ntfsdump.formats import get_format_handler
-from ntfsdump.formats.detect import detect_image_format
+from ntfsdump.formats.detect import detect_image_format, is_vhdx_file
 
 
 def _write(path: Path, data: bytes) -> Path:
@@ -34,6 +34,29 @@ def test_detect_vhd(tmp_path: Path):
 def test_detect_vhdx(tmp_path: Path):
     image = _write(tmp_path / 'disk.vhdx', b'vhdxfile' + b'\x00' * 8192)
     assert detect_image_format(image) == 'vhdx'
+
+
+def test_detect_vhdx_by_signature_only(tmp_path: Path):
+    # Signature wins even without a .vhdx/.avhdx extension.
+    image = _write(tmp_path / 'disk.bin', b'vhdxfile' + b'\x00' * 8192)
+    assert detect_image_format(image) == 'vhdx'
+
+
+def test_detect_avhdx_by_extension_only(tmp_path: Path):
+    # Extension is accepted when the signature check is inconclusive.
+    image = _write(tmp_path / 'Disk_0.avhdx', b'\x00' * 8192)
+    assert detect_image_format(image) == 'vhdx'
+
+
+def test_detect_avhdx(tmp_path: Path):
+    image = _write(tmp_path / 'Disk_0.avhdx', b'vhdxfile' + b'\x00' * 8192)
+    assert detect_image_format(image) == 'vhdx'
+    assert is_vhdx_file(image) is True
+
+
+def test_is_vhdx_file_false_for_vhd(tmp_path: Path):
+    image = _write(tmp_path / 'disk.vhd', b'conectix' + b'\x00' * 512)
+    assert is_vhdx_file(image) is False
 
 
 def test_detect_vmdk_descriptor(tmp_path: Path):

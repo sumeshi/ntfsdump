@@ -8,10 +8,20 @@ import pyvmdk
 from ntfsdump.errors import NtfsDumpError
 
 
-def _is_vhdx(path: Path) -> bool:
+VHDX_SIGNATURE = b'vhdxfile'
+VHDX_SUFFIXES = ('.vhdx', '.avhdx')
+
+
+def is_vhdx_file(path) -> bool:
+    """Whether ``path`` starts with the VHDX file type identifier.
+
+    Hyper-V base VHDX and differencing AVHDX images share this signature; they
+    are distinguished by the presence of a parent locator / differential disk
+    type, which is handled by the VHDX chain resolver rather than detection.
+    """
     try:
-        with path.open('rb') as f:
-            return f.read(8) == b'vhdxfile'
+        with Path(path).open('rb') as f:
+            return f.read(8) == VHDX_SIGNATURE
     except OSError:
         return False
 
@@ -46,7 +56,7 @@ def detect_image_format(path) -> str:
 
     try:
         if pyvhdi.check_file_signature(str(p)):
-            return 'vhdx' if _is_vhdx(p) else 'vhd'
+            return 'vhdx' if is_vhdx_file(p) else 'vhd'
     except Exception:
         pass
 
@@ -59,5 +69,11 @@ def detect_image_format(path) -> str:
     # VMDK descriptors are plain text and may not carry a binary signature.
     if _is_vmdk_descriptor(p):
         return 'vmdk'
+
+    # VHDX/AVHDX can also be recognized by their file signature (e.g. a .vhdx
+    # file with a non-standard extension), or by the .vhdx/.avhdx extension
+    # itself (e.g. a file whose signature check was inconclusive).
+    if p.suffix.lower() in VHDX_SUFFIXES or is_vhdx_file(p):
+        return 'vhdx'
 
     return 'raw'
