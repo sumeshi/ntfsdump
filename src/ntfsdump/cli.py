@@ -241,6 +241,7 @@ def _run(args) -> None:
         snapshot=args.snapshot,
         disk=args.disk,
         flat=args.flat,
+        quiet=args.quiet,
     )
 
 
@@ -248,7 +249,6 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     parser = create_parser()
     args = parser.parse_args(argv)
 
-    MetaData.quiet = args.quiet
     configure_logging(args.log)
 
     try:

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 from ntfsdump.image import ImageFile
+from ntfsdump.logger import MetaData
 
 
 def ntfsdump(
@@ -14,6 +15,7 @@ def ntfsdump(
     snapshot=None,
     disk: Optional[int] = None,
     flat: bool = False,
+    quiet: bool = False,
 ) -> None:
     """A tool for extracting files from an NTFS volume on a disk image.
 
@@ -27,7 +29,10 @@ def ntfsdump(
         snapshot (optional): VMware snapshot ID to read. Defaults to None.
         disk (Optional[int], optional): VMware virtual disk ID to read. Defaults to None.
         flat (bool, optional): reconstruct directory tree or not. Defaults to False.
+        quiet (bool, optional): suppress progress lines on stdout.
+            Errors are still written to stderr. Defaults to False.
     """
+    MetaData.quiet = quiet
     img = ImageFile(
         source,
         volume=volume,
