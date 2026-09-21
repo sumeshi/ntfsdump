@@ -28,7 +28,7 @@ def test_ntfsdump(query: str, hash_list: set[str]):
     cachedir = Path(__file__).parent / 'cache'
 
     ntfsdump(
-        image=cachedir / 'ntfs.raw',
+        source=cachedir / 'ntfs.raw',
         paths=[query],
         output=cachedir,
     )

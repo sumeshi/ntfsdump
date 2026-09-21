@@ -7,5 +7,5 @@ class E01Handler(FormatHandler):
     def get_img_info(self, path: str) -> pytsk3.Img_Info:
         filenames = pyewf.glob(path)
         ewf_handle = pyewf.handle()
-        ewf_handle.open(filenames)
+        ewf_handle.open(filenames, mode='r')
         return BaseImgInfo(ewf_handle)

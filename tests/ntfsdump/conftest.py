@@ -7,6 +7,17 @@ from urllib import request
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def reset_logging_state():
+    from ntfsdump.logger import MetaData, configure_logging
+
+    configure_logging(None)
+    MetaData.quiet = False
+    yield
+    configure_logging(None)
+    MetaData.quiet = False
+
+
 @pytest.fixture(scope='session', autouse=True)
 def prepare_ntfsfile():
     # setup

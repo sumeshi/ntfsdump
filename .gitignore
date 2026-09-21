@@ -137,3 +137,10 @@ NtfsDumpView.*/
 
 /tests/ntfsdump/cache/*
 !/tests/ntfsdump/cache/.gitkeep
+
+.serena
+.tokensave
+GOAL.md
+CHANGES.md
+TASKS.md
+AGENTS.md

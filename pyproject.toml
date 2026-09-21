@@ -10,10 +10,10 @@ authors = [
 requires-python = ">=3.13"
 
 dependencies = [
-    "pytsk3==20260520",
+    "pytsk3==20260715",
     "libewf-python==20240506",
-    "libvmdk-python==20240510",
-    "libvhdi-python==20251119",
+    "libvmdk-python==20260714",
+    "libvhdi-python==20260901",
 ]
 
 [build-system]

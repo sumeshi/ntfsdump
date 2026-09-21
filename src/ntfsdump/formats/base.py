@@ -1,15 +1,25 @@
 # coding: utf-8
 from abc import ABC, abstractmethod
+from typing import Any, Optional
+
 import pytsk3
 
 
 class BaseImgInfo(pytsk3.Img_Info):
-    def __init__(self, handle):
+    def __init__(self, handle, keepalive: Optional[Any] = None):
         self.handle = handle
+        # Keep references to any handles (e.g. a VMDK parent chain) alive for
+        # as long as this image info object is used.
+        self._keepalive = keepalive
         super().__init__(url="", type=pytsk3.TSK_IMG_TYPE_EXTERNAL)
 
     def close(self):
-        self.handle.close()
+        handles = self._keepalive if self._keepalive else [self.handle]
+        for handle in handles:
+            try:
+                handle.close()
+            except Exception:
+                pass
 
     def read(self, offset, size):
         self.handle.seek(offset)
