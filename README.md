@@ -79,19 +79,19 @@ vm.vmsd
 - `--version`, `-V`: Display program version.
 - `--quiet`, `-q`: Suppress normal stdout output. Errors are still written to stderr.
 - `--flat`: Extract all artifacts purely into a single folder without reconstructing directories. Directory names are joined into the filename with `_` (e.g. `/Windows/System32/cmd.exe` -> `Windows_System32_cmd.exe`) so that same-name files from different directories stay apart.
-- `--volume`, `-n`: Target specific NTFS volume number (default: auto-detects main OS volume).
+- `--volume`, `-n`: Target the NTFS partition address shown in analysis logs (default: auto-detects main OS volume).
 - `--snapshot`, `-s`: Read the NTFS as it was at the given VMware snapshot. The ID is the snapshot UID shown by `--list-snapshots`. Without it, the VM's current state is read.
 - `--disk`, `-d`: Read a specific VMware virtual disk by ID (default: auto-select when unique).
 - `--list-snapshots`: List VMware snapshots found in the SOURCE and exit.
 - `--list-disks`: List VMware virtual disks found in the SOURCE and exit.
 - `--image-format`: Force the image format instead of auto-detection. Options: `raw`, `e01`, `vhd`, `vhdx`, `vmdk`.
 - `--log [FILE]`: Enable logging. Optionally specify a log file path.
-- `--output`, `-o`: Directory or file to save exported outputs.
+- `--output`, `-o`: Output directory (default: current directory). An existing file is used as a file output.
+- `--output-file`: Save one file or ADS to the path given by `-o`, including a new filename.
 
-Each file is extracted to a temporary file in the output directory and placed at
-its destination only after extraction succeeds. In normal mode, successful
-extraction replaces an existing file; failed extraction leaves it unchanged.
-With `--flat`, conflicting output names receive a unique suffix instead.
+In directory output, conflicting filenames receive a unique suffix. File output
+replaces an existing file only after extraction succeeds. Failed extraction
+preserves existing files.
 
 
 #### Examples
@@ -99,8 +99,14 @@ With `--flat`, conflicting output names receive a unique suffix instead.
 Dump a single file (format is auto-detected):
 
 ```bash
-ntfsdump -o ./dump /path/to/your/image.raw /$MFT
+ntfsdump -o ./dump /path/to/your/image.raw '/$MFT'
 ntfsdump -o ./dump /path/to/your/evidence.E01 /Windows/System32/config/SYSTEM
+```
+
+Save a single file under a different name:
+
+```bash
+ntfsdump --output-file -o ./SYSTEM.bin /path/to/your/image.raw /Windows/System32/config/SYSTEM
 ```
 
 Dump an entire directory recursively:
@@ -112,7 +118,37 @@ ntfsdump -o ./dump /path/to/your/image.raw /Windows/System32/winevt/Logs
 Force the format for a file without a recognizable signature:
 
 ```bash
-ntfsdump --image-format raw /path/to/your/evidence.bin /$MFT
+ntfsdump --image-format raw /path/to/your/evidence.bin '/$MFT'
+```
+
+#### Windows Artifacts
+
+These examples use `image.raw` and save the original directory structure under
+`./dump`. Replace `Alice` with the profile directory in your image. Quote paths
+to preserve `$`, spaces, and wildcard queries when running from a shell.
+
+```bash
+# NTFS metadata: MFT, transaction log, and USN Journal
+ntfsdump -o ./dump image.raw '/$MFT' '/$LogFile' '/$Extend/$UsnJrnl:$J'
+
+# System registry hives and their transaction logs
+ntfsdump -o ./dump image.raw '/Windows/System32/config'
+
+# User registry hives and their transaction logs (prefix expansion)
+ntfsdump -o ./dump image.raw '/Users/Alice/NTUSER.DAT.*' \
+  '/Users/Alice/AppData/Local/Microsoft/Windows/UsrClass.dat.*'
+
+# Windows event logs
+ntfsdump -o ./dump image.raw '/Windows/System32/winevt/Logs'
+
+# Prefetch and Amcache
+ntfsdump -o ./dump image.raw '/Windows/Prefetch' '/Windows/AppCompat/Programs/Amcache.hve.*'
+
+# System Resource Usage Monitor (SRUM)
+ntfsdump -o ./dump image.raw '/Windows/System32/sru'
+
+# User shortcuts and Jump Lists
+ntfsdump -o ./dump image.raw '/Users/Alice/AppData/Roaming/Microsoft/Windows/Recent'
 ```
 
 #### VMware Snapshots (`--list-snapshots`, `-s/--snapshot`)
@@ -175,8 +211,13 @@ ntfsdump ./WindowsVM -d 1 /Evidence
 Even a bare VMDK inside the VM directory is understood: parents are resolved automatically from the descriptors, so pointing at a delta file reads the whole chain (base + deltas) as one logical disk:
 
 ```bash
-ntfsdump ./WindowsVM/Windows-000003.vmdk /$MFT
+ntfsdump ./WindowsVM/Windows-000003.vmdk '/$MFT'
 ```
+
+Keep VMDK parents and data files within the initial disk's directory and its
+subdirectories; symlinks and junctions are not followed. VMX/VMSD disk references
+must stay within the VM directory. Update copied metadata to use local paths
+when necessary.
 
 Using with [ntfsfind](https://github.com/sumeshi/ntfsfind) over standard input (pipe):
 
@@ -191,12 +232,12 @@ ntfsfind '.*\.evtx' ./image.raw | ntfsdump -o ./dump ./image.raw
 `ntfsdump` can read Hyper-V checkpoint (differencing disk) chains directly. Both a base `VHDX` and an `AVHDX` differencing disk are auto-detected, and either can be passed as `SOURCE`:
 
 ```bash
-ntfsdump ./HyperVM/Disk_0.avhdx /$MFT
+ntfsdump ./HyperVM/Disk_0.avhdx '/$MFT'
 ntfsdump ./HyperVM/Disk_0.avhdx /Windows/System32/config/SYSTEM
 ```
 
 - The parent chain is resolved automatically from the VHDX metadata (parent locator), so pointing at any disk in the chain reads the whole chain as one logical disk.
-- Parent images are looked up next to the child image; absolute Windows parent paths are reduced to their basename.
+- Parents can use relative or absolute paths. For copied Windows images, place parents next to the child to use the filename fallback.
 - Images are never merged or converted — nothing is written to the source directory.
 - Checkpoint listing (`--list-checkpoints`) is not yet available, and `-s` / `--snapshot` remains VMware-only.
 
@@ -243,10 +284,10 @@ Logging is disabled by default and no log file is created. To record which files
 
 ```bash
 # Auto-generated name in the current directory (e.g. ntfsdump_20260921_153000.log)
-ntfsdump image.raw /$MFT --log
+ntfsdump image.raw '/$MFT' --log
 
 # Explicit log path
-ntfsdump image.raw /$MFT --log ./case.log
+ntfsdump image.raw '/$MFT' --log ./case.log
 ```
 
 

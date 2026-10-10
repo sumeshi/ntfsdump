@@ -100,12 +100,12 @@ class NtfsVolume:
             {ord(c): '_' for c in _ILLEGAL_FILENAME_CHARS}
         )
 
-    def __resolve_flat_collision(
+    def __resolve_collision(
         self,
         target: Path,
         mft_entry: Optional[int],
     ) -> Path:
-        """Rename a flat target so that same-name files do not overwrite
+        """Rename a target so that same-name files do not overwrite
         each other (or a previously dumped file).
 
         The MFT entry number is used as the discriminating suffix.
@@ -215,17 +215,22 @@ class NtfsVolume:
             except OSError:
                 pass
 
-    def dump_files(self, query: str, destination_path: Path, flat: bool = False) -> None:
+    def dump_files(
+        self, query: str, destination_path: Path, flat: bool = False,
+        output_file: bool = False,
+    ) -> None:
         query = self.__clean_query(query)
         logger.log(f"[query] {query}", 'system')
+        file_output = output_file or destination_path.is_file()
 
         if query.endswith('.*'):
+            if file_output:
+                raise NtfsDumpError("File output requires a single file or ADS query.")
             # Wildcard expansion (documented as "prefix expansion", e.g.
             # /Windows/Prefetch/.*). Checked first: pytsk3 cannot open the
             # literal ".*" path, so the dir/file checks below would fail.
-            base_query = query.replace('.*', '')
-            parent_dir = str(Path(base_query).parent).replace('\\', '/')
-            file_prefix = Path(base_query).name
+            parent_dir, file_prefix = query[:-2].rsplit('/', 1)
+            parent_dir = parent_dir or '/'
 
             files = [
                 artifact for artifact in self.__list_artifacts(parent_dir)
@@ -239,11 +244,20 @@ class NtfsVolume:
         try:
             is_dir = self.__is_dir(query)
         except Exception as e:
+            # shortcut: pytsk3 exposes no missing-path errno, use structured errors if added.
+            if isinstance(e, FileNotFoundError) or (
+                isinstance(e, OSError) and 'tsk_fs_file_open: path not found:' in str(e)
+            ):
+                raise NtfsDumpError(
+                    f"Query path was not found in the NTFS volume: {query} ({e})"
+                ) from e
             raise NtfsDumpError(
-                f"Query path was not found in the NTFS volume: {query} ({e})"
+                f"Unable to read query path in the NTFS volume: {query} ({e})"
             ) from e
 
         if is_dir:
+            if file_output:
+                raise NtfsDumpError("File output requires a single file or ADS query.")
             for artifact in self.__list_artifacts(query):
                 newquery = str(Path(query) / artifact)
                 # recursive dump
@@ -251,9 +265,9 @@ class NtfsVolume:
         else:
             # A regular file, or an exotic entry that is still openable:
             # a failure is reported to the caller instead of being swallowed.
-            self.__dump_file(self.fs_info.open(query), query, destination_path, flat)
+            self.__dump_file(self.fs_info.open(query), query, destination_path, flat, file_output)
 
-    def __dump_file(self, f, query: str, destination_path: Path, flat: bool) -> None:
+    def __dump_file(self, f, query: str, destination_path: Path, flat: bool, file_output: bool) -> None:
         meta = f.info.meta
         if meta is None:
             # An entry without MFT metadata cannot be read reliably; never
@@ -285,7 +299,7 @@ class NtfsVolume:
         q_path = Path(query.lstrip('/'))
         flat_name = self.__safe_filename('_'.join(q_path.parts))
 
-        if destination_path.name in (filename, output_name, flat_name):
+        if file_output:
             target = self.__check_output_path(destination_path, destination_path)
         else:
             if flat:
@@ -294,25 +308,15 @@ class NtfsVolume:
                 # Always recreate the directory tree using relative path
                 target = destination_path / q_path.parent / output_name
             target = self.__check_output_path(destination_path, target)
-            if flat:
-                target = self.__resolve_flat_collision(target, mft_entry)
+            if flat or not target.is_dir():
+                target = self.__resolve_collision(target, mft_entry)
 
         try:
             self.__write_stream(f, target, size, ads_attribute)
 
         except IsADirectoryError:
-            if target != destination_path:
-                # The reconstructed tree target is occupied by a directory
-                # (e.g. leftovers of a previous partial extraction); never
-                # silently move the output somewhere else.
-                raise NtfsDumpError(
-                    f"Destination path is an existing directory: {target}"
-                ) from None
-            # ``-o`` pointed at an existing directory: write the named
-            # file into it instead.
-            target = destination_path / (flat_name if flat else output_name)
-            if flat:
-                target = self.__resolve_flat_collision(target, mft_entry)
-            self.__write_stream(f, target, size, ads_attribute)
+            raise NtfsDumpError(
+                f"Destination path is an existing directory: {target}"
+            ) from None
 
         logger.log(f"[dumped] {target}", 'info')

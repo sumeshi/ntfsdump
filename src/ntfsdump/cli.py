@@ -71,11 +71,15 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--output", "-o", type=str, default=".",
-        help="output destination directory or file path (default: current dir '.')."
+        help="output directory or existing file; use --output-file for a new file (default: current dir '.')."
+    )
+    parser.add_argument(
+        "--output-file", action="store_true",
+        help="treat --output/-o as a file path; requires one file or ADS query."
     )
     parser.add_argument(
         "--volume", "-n", type=int, default=None,
-        help="target NTFS volume number (default: auto-detect main OS volume)."
+        help="target NTFS partition address shown in analysis logs (default: auto-detect main OS volume)."
     )
     parser.add_argument(
         "--snapshot", "-s", type=str, default=None,
@@ -246,6 +250,7 @@ def _run(args) -> None:
         disk=args.disk,
         flat=args.flat,
         quiet=args.quiet,
+        output_file=args.output_file,
     )
 
 

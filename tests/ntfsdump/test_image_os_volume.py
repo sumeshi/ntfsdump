@@ -164,6 +164,27 @@ def test_explicit_volume_not_found_raises(tmp_path):
     assert 'NTFS volume 99 was not found' in str(excinfo.value)
 
 
+@pytest.mark.parametrize('volume_num, selected_addr', [(None, 27), (5, 5)])
+def test_analysis_logs_use_partition_addresses(tmp_path, monkeypatch, capsys, volume_num, selected_addr):
+    volumes = [
+        make_volume(tmp_path, 5, 'NTFS data', make_fs_info(['/Data'])),
+        make_volume(tmp_path, 27, 'NTFS OS', make_fs_info(['/Windows', '/Users'])),
+    ]
+    source = SimpleNamespace(get_img_info=lambda: object())
+    monkeypatch.setattr('ntfsdump.image.SourceResolver.resolve', lambda *args, **kwargs: source)
+    monkeypatch.setattr(ImageFile, '_ImageFile__analyze_partitions', lambda self: volumes)
+
+    image = ImageFile(tmp_path, volume=volume_num)
+
+    assert image.main_volume.addr == selected_addr
+    output = capsys.readouterr().out
+    assert 'NTFS Volume 5: NTFS data' in output
+    assert 'NTFS Volume 27: NTFS OS' in output
+    assert f'Volume {selected_addr} was selected as the main partition' in output
+    assert 'NTFS Volume 0:' not in output
+    assert 'NTFS Volume 1:' not in output
+
+
 def test_data_volume_with_windows_dir_only_is_not_os_candidate(tmp_path):
     # A data volume that happens to carry a bare '/Windows' directory has
     # only one OS marker; without a second indicator it must not be treated

@@ -167,3 +167,49 @@ def test_snapshot_disks_without_node_get_unique_ids(tmp_path):
     ids = [disk.id for disk in vm.current_disks()]
 
     assert len(ids) == len(set(ids))
+
+
+@pytest.mark.parametrize('reference', [
+    '../outside.vmdk', '/outside.vmdk', 'C:\\outside\\disk.vmdk',
+    '\\\\server\\share\\disk.vmdk', '//server/share/disk.vmdk',
+])
+@pytest.mark.parametrize('snapshot', [False, True])
+def test_vm_disk_references_reject_external_paths(tmp_path, monkeypatch, reference, snapshot):
+    vmx = tmp_path / 'vm.vmx'
+    vmx.write_text('scsi0:0.fileName = "local.vmdk"\n')
+    if snapshot:
+        (tmp_path / 'vm.vmsd').write_text('\n'.join([
+            'snapshot0.uid = "1"', 'snapshot0.numDisks = "1"',
+            f'snapshot0.disk0.fileName = "{reference}"',
+        ]))
+    else:
+        vmx.write_text(f'scsi0:0.fileName = "{reference}"\n')
+    original_stat = Path.stat
+
+    def local_stat(path, *args, **kwargs):
+        assert path.is_relative_to(tmp_path), f'External path probed: {path}'
+        return original_stat(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, 'stat', local_stat)
+    with pytest.raises(NtfsDumpError, match='image (reference|directory)'):
+        vm = VmwareVM(tmp_path)
+        vm.resolve_disk(snapshot='1' if snapshot else None)
+
+
+@pytest.mark.parametrize('metadata', [False, True])
+def test_vm_discovery_rejects_external_symlinks(tmp_path, metadata):
+    evidence = tmp_path / 'evidence'
+    evidence.mkdir()
+    outside = tmp_path / ('outside.vmx' if metadata else 'outside.vmdk')
+    outside.write_text('scsi0:0.fileName = "disk.vmdk"\n' if metadata else '# Disk DescriptorFile\n')
+    (evidence / ('vm.vmx' if metadata else 'disk.vmdk')).symlink_to(outside)
+
+    with pytest.raises(NtfsDumpError, match='symlink or junction'):
+        VmwareVM(evidence)
+
+
+def test_vm_disk_subdirectory_and_windows_separators_are_supported(tmp_path):
+    (tmp_path / 'disks').mkdir()
+    (tmp_path / 'vm.vmx').write_text('scsi0:0.fileName = "disks\\base.vmdk"\n')
+
+    assert VmwareVM(tmp_path).resolve_disk() == tmp_path / 'disks' / 'base.vmdk'

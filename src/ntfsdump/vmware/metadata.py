@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from ntfsdump.errors import NtfsDumpError
+from ntfsdump.image_paths import confined_image_path
 
 
 MULTIPLE_DISKS_MESSAGE = (
@@ -31,9 +32,7 @@ class SnapshotDiskInfo:
     filename: str
 
     def path(self, directory: Path) -> Path:
-        if Path(self.filename).is_absolute():
-            return Path(self.filename)
-        return directory / self.filename
+        return confined_image_path(directory, self.filename)
 
 
 @dataclass
@@ -138,9 +137,9 @@ def discover_vmdk_disks(directory: Path) -> List[VirtualDiskInfo]:
     candidates = [
         entry
         for entry in sorted(directory.iterdir())
-        if entry.is_file()
-        and entry.suffix.lower() == '.vmdk'
+        if entry.suffix.lower() == '.vmdk'
         and not _VMDK_EXTENT_OR_DELTA_RE.search(entry.name)
+        and confined_image_path(directory, entry.name).is_file()
         and _looks_like_vmdk_descriptor(entry)
     ]
     return [
@@ -174,9 +173,7 @@ def parse_vmx(path: Path) -> List[VirtualDiskInfo]:
         device_type = device.get('devicetype', '').lower()
         if 'cdrom' in device_type:
             continue
-        disk_path = Path(filename)
-        if not disk_path.is_absolute():
-            disk_path = directory / filename
+        disk_path = confined_image_path(directory, filename)
         disks.append(VirtualDiskInfo(id=0, node=node, path=disk_path))
 
     for index, disk in enumerate(disks):
@@ -278,7 +275,7 @@ class VmwareVM:
         if not self.directory.is_dir():
             return None
         for entry in sorted(self.directory.iterdir()):
-            if entry.is_file() and entry.suffix.lower() == suffix:
+            if entry.suffix.lower() == suffix and confined_image_path(self.directory, entry.name).is_file():
                 return entry
         return None
 

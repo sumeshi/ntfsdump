@@ -70,10 +70,10 @@ class ImageFile:
             f"[analyze] {len(self.volumes)} volumes were detected as NTFS volumes.",
             'system',
         )
-        for index, item in enumerate(self.volumes):
-            logger.log(f"[analyze] NTFS Volume {index}: {item.description}", 'system')
+        for item in self.volumes:
+            logger.log(f"[analyze] NTFS Volume {item.addr}: {item.description}", 'system')
         logger.log(
-            f"[analyze] Volume {self.volumes.index(self.main_volume)} was automatically detected as the main partition.",
+            f"[analyze] Volume {self.main_volume.addr} was selected as the main partition.",
             'system',
         )
 

@@ -18,12 +18,13 @@ def reset_logging_state():
     MetaData.quiet = False
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope='session')
 def prepare_ntfsfile():
     # setup
     ## download ntfs sample
     url = 'https://github.com/msuhanov/ntfs-samples/blob/master/ntfs.tgz?raw=true'
     ntfs_tgs = Path(__file__).parent / Path('cache') / ('ntfs.tgs')
+    ntfs_tgs.parent.mkdir(parents=True, exist_ok=True)
     if not ntfs_tgs.exists():
         request.urlretrieve(url, ntfs_tgs.resolve())
     ntfs_md5 = hashlib.md5(ntfs_tgs.read_bytes()).hexdigest()
@@ -56,7 +57,7 @@ def prepare_ntfsfile():
         safe_extract(t, path=ntfs_tgs.parent)
 
 
-    yield
+    yield ntfs_tgs.parent / 'ntfs.raw'
     # teardown
     ## remove cache files
     # cachedir = Path(__file__).parent / Path('cache')

@@ -212,7 +212,7 @@ def test_dump_files_failed_read_preserves_existing_file(tmp_path, ads, failure):
 
 @pytest.mark.parametrize('data', [b'', b'new evidence'])
 @pytest.mark.parametrize('explicit_output', [False, True])
-def test_dump_files_success_replaces_existing_file(tmp_path, data, explicit_output, monkeypatch):
+def test_dump_files_success_handles_existing_file(tmp_path, data, explicit_output, monkeypatch):
     fs = FakeFSInfo()
     fs.add('/file.bin', size=len(data), data=data)
     target = tmp_path / 'file.bin'
@@ -228,8 +228,14 @@ def test_dump_files_success_replaces_existing_file(tmp_path, data, explicit_outp
         '/file.bin', target if explicit_output else tmp_path,
     )
 
-    assert target.read_bytes() == data
-    assert list(tmp_path.iterdir()) == [target]
+    if explicit_output:
+        assert target.read_bytes() == data
+        assert list(tmp_path.iterdir()) == [target]
+    else:
+        assert target.read_bytes() == b'existing evidence'
+        renamed = tmp_path / 'file_5.bin'
+        assert renamed.read_bytes() == data
+        assert set(tmp_path.iterdir()) == {target, renamed}
 
 
 @pytest.mark.parametrize('data', [b'', b'new evidence'])
@@ -248,7 +254,7 @@ def test_dump_files_failed_replace_preserves_destination(tmp_path, monkeypatch, 
 
     monkeypatch.setattr(Path, 'replace', fail_replace)
     with pytest.raises(PermissionError, match='cannot replace destination'):
-        make_volume(tmp_path, fs).dump_files('/file.bin', tmp_path)
+        make_volume(tmp_path, fs).dump_files('/file.bin', target, output_file=True)
 
     if existing:
         assert target.read_bytes() == b'existing evidence'
@@ -370,6 +376,30 @@ def test_dump_files_not_found_query_raises_with_query(tmp_path):
     assert not (tmp_path / 'out').exists()
 
 
+@pytest.mark.parametrize('error, expected_message', [
+    (OSError('FS_Info_open: Unable to open file: Invalid API argument '
+             '(tsk_fs_file_open: path not found: /file.bin)'), 'Query path was not found'),
+    (OSError('image read failed'), 'Unable to read query path'),
+    (OSError('corrupt metadata: path not found in index'), 'Unable to read query path'),
+    (ValueError('invalid NTFS structure'), 'Unable to read query path'),
+])
+def test_dump_files_classifies_query_open_errors(tmp_path, monkeypatch, error, expected_message):
+    fs = FakeFSInfo()
+
+    def fail_open(query):
+        raise error
+
+    monkeypatch.setattr(fs, 'open', fail_open)
+    with pytest.raises(NtfsDumpError) as excinfo:
+        make_volume(tmp_path, fs).dump_files('/file.bin', tmp_path / 'out')
+
+    assert str(excinfo.value).startswith(expected_message)
+    assert '/file.bin' in str(excinfo.value)
+    assert str(error) in str(excinfo.value)
+    assert excinfo.value.__cause__ is error
+    assert not (tmp_path / 'out').exists()
+
+
 def test_dump_files_entry_without_meta_raises_instead_of_empty_file(tmp_path):
     # A REG entry without MFT metadata must not be dumped as an empty
     # "successful" file (old code crashed loudly; never go silent here).
@@ -425,6 +455,34 @@ def test_dump_files_flat_collision_still_gets_unique_suffix(tmp_path):
     assert outputs['a_x_21.bin'] == b'bbbb'
 
 
+@pytest.mark.parametrize('ads_first', [False, True])
+@pytest.mark.parametrize('ads_data, regular_data', [
+    (b'ADS', b'regular'), (b'', b'regular'), (b'ADS', b''), (b'', b''),
+])
+def test_dump_files_tree_ads_name_collision(tmp_path, ads_first, ads_data, regular_data):
+    fs = FakeFSInfo()
+    ads_query = '/folder/sample.txt:Zone.Identifier'
+    regular_query = '/folder/sample.txt_Zone.Identifier'
+    fs.add(
+        ads_query, size=0, data=ads_data, addr=20,
+        attributes=[FakeAttribute(b'Zone.Identifier', len(ads_data))],
+    )
+    fs.add(regular_query, size=len(regular_data), data=regular_data, addr=21)
+    vol = make_volume(tmp_path, fs)
+    queries = [ads_query, regular_query] if ads_first else [regular_query, ads_query]
+    for query in queries:
+        vol.dump_files(query, tmp_path)
+
+    folder = tmp_path / 'folder'
+    first_data, second_data = (ads_data, regular_data) if ads_first else (regular_data, ads_data)
+    second_addr = 21 if ads_first else 20
+    outputs = {p.name: p.read_bytes() for p in folder.iterdir()}
+    assert outputs == {
+        'sample.txt_Zone.Identifier': first_data,
+        f'sample.txt_Zone_{second_addr}.Identifier': second_data,
+    }
+
+
 def test_dump_files_flat_ads_embeds_folder_path_and_stream_name(tmp_path):
     ads_size = 100
     attrs = [FakeAttribute(name=b'zone', size=ads_size, type=1, id=4)]
@@ -463,3 +521,58 @@ def test_dump_files_wildcard_expansion_is_reachable(tmp_path):
     assert names == ['data_one.bin', 'data_two.bin']
     assert (destination / 'data_one.bin').read_bytes() == b'aaa'
     assert (destination / 'data_two.bin').read_bytes() == b'bbbb'
+
+
+@pytest.mark.parametrize('query', ['/data/.*', '/data/o.*'])
+def test_directory_wildcard_does_not_match_neighboring_directory(tmp_path, query):
+    fs = FakeFSInfo()
+    for directory in ['/data', '/database']:
+        fs.add(directory, size=0, data=b'', name_type=pytsk3.TSK_FS_NAME_TYPE_DIR)
+    fs.add('/data/one.bin', size=3, data=b'one')
+    fs.add('/database/other.bin', size=5, data=b'other')
+
+    make_volume(tmp_path, fs).dump_files(query, tmp_path)
+
+    assert (tmp_path / 'data' / 'one.bin').read_bytes() == b'one'
+    assert not (tmp_path / 'database').exists()
+
+
+@pytest.mark.parametrize('data', [b'', b'new'])
+def test_directory_named_like_file_preserves_tree(tmp_path, data):
+    fs = FakeFSInfo()
+    fs.add('/folder/file.bin', size=len(data), data=data)
+    destination = tmp_path / 'file.bin'
+    destination.mkdir()
+
+    make_volume(tmp_path, fs).dump_files('/folder/file.bin', destination)
+
+    assert (destination / 'folder' / 'file.bin').read_bytes() == data
+    assert not (destination / 'file.bin').exists()
+
+
+@pytest.mark.parametrize('data', [b'', b'new'])
+@pytest.mark.parametrize('existing', [False, True])
+def test_output_file_can_use_a_different_name(tmp_path, data, existing):
+    fs = FakeFSInfo()
+    fs.add('/folder/file.bin', size=len(data), data=data)
+    destination = tmp_path / 'renamed.bin'
+    if existing:
+        destination.write_bytes(b'old')
+
+    make_volume(tmp_path, fs).dump_files('/folder/file.bin', destination, output_file=True)
+
+    assert destination.read_bytes() == data
+    assert list(tmp_path.iterdir()) == [destination]
+
+
+@pytest.mark.parametrize('query', ['/folder', '/folder/.*'])
+def test_output_file_rejects_directory_and_wildcard_queries(tmp_path, query):
+    fs = FakeFSInfo()
+    fs.add('/folder', size=0, data=b'', name_type=pytsk3.TSK_FS_NAME_TYPE_DIR)
+    destination = tmp_path / 'output.bin'
+    destination.write_bytes(b'existing evidence')
+
+    with pytest.raises(NtfsDumpError, match='File output requires a single file or ADS query'):
+        make_volume(tmp_path, fs).dump_files(query, destination, output_file=True)
+
+    assert destination.read_bytes() == b'existing evidence'

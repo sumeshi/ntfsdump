@@ -28,5 +28,25 @@ jobs:
           pip install uv
           uv sync
 
-      - name: run tests
-        run: uv run pytest
+      - name: run unit tests
+        run: uv run pytest --ignore=tests/ntfsdump/test__init__.py
+
+      - name: cache NTFS sample archive
+        id: ntfs-sample
+        uses: actions/cache@v4
+        with:
+          path: tests/ntfsdump/cache/ntfs.tgs
+          key: ntfs-sample-79b3b6f3fa173fd0d2a05d0d2693afd0
+
+      - name: download NTFS sample with retries
+        if: steps.ntfs-sample.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p tests/ntfsdump/cache
+          curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 15 --max-time 120 \
+            --output tests/ntfsdump/cache/ntfs.tgs.tmp \
+            'https://github.com/msuhanov/ntfs-samples/blob/master/ntfs.tgz?raw=true'
+          mv tests/ntfsdump/cache/ntfs.tgs.tmp tests/ntfsdump/cache/ntfs.tgs
+
+      - name: run sample image E2E tests
+        run: uv run pytest tests/ntfsdump/test__init__.py
