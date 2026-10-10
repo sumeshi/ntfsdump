@@ -24,7 +24,8 @@ def prepare_ntfsfile():
     ## download ntfs sample
     url = 'https://github.com/msuhanov/ntfs-samples/blob/master/ntfs.tgz?raw=true'
     ntfs_tgs = Path(__file__).parent / Path('cache') / ('ntfs.tgs')
-    request.urlretrieve(url, ntfs_tgs.resolve())
+    if not ntfs_tgs.exists():
+        request.urlretrieve(url, ntfs_tgs.resolve())
     ntfs_md5 = hashlib.md5(ntfs_tgs.read_bytes()).hexdigest()
     assert ntfs_md5 == '79b3b6f3fa173fd0d2a05d0d2693afd0'
 

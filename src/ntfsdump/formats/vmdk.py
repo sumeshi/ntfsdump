@@ -2,6 +2,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
+import re
 
 import pytsk3
 import pyvmdk
@@ -18,12 +19,49 @@ class VmdkChain:
     handles: List["pyvmdk.handle"] = field(default_factory=list)
 
 
-def _parent_path(child: Path, parent_filename: str) -> Path:
-    parent_filename = parent_filename.replace('\\', '/')
-    parent = Path(parent_filename)
-    if parent.is_absolute():
-        return parent
-    return child.parent / parent
+_WINDOWS_ABSOLUTE_RE = re.compile(r'^[A-Za-z]:[\\/]')
+
+
+def _parent_candidates(child: Path, parent_filename: str) -> List[Path]:
+    """Candidate paths for a parent disk referenced by ``parent_filename``.
+
+    A Windows absolute path from the original host is tried verbatim first
+    (valid when ntfsdump runs on Windows or the original layout is restored;
+    it is only used when it is actually absolute on this platform so that a
+    POSIX run never resolves it relative to the current working directory),
+    then the drive-stripped path relative to the child directory, then the
+    basename fallback.
+    """
+    normalized = parent_filename.replace('\\', '/')
+
+    if _WINDOWS_ABSOLUTE_RE.match(parent_filename):
+        candidates: List[Path] = []
+        verbatim = Path(parent_filename)
+        if verbatim.is_absolute():
+            candidates.append(verbatim)
+        stripped = normalized.split(':', 1)[1].lstrip('/')
+        candidates.append(child.parent / stripped)
+        candidates.append(child.parent / Path(normalized).name)
+    else:
+        parent = Path(normalized)
+        if parent.is_absolute():
+            candidates = [parent]
+        else:
+            candidates = [child.parent / parent]
+
+    unique: List[Path] = []
+    for candidate in candidates:
+        if candidate not in unique:
+            unique.append(candidate)
+    return unique
+
+
+def _resolve_parent(child: Path, parent_filename: str) -> Path:
+    """Pick the first existing candidate parent path."""
+    for candidate in _parent_candidates(child, parent_filename):
+        if candidate.exists():
+            return candidate
+    raise NtfsDumpError(f"Parent VMDK was not found: {parent_filename}")
 
 
 def _safe_close(handle) -> None:
@@ -59,9 +97,7 @@ def open_vmdk_chain(path: Path, _seen: Optional[List[Path]] = None) -> VmdkChain
 
         parent_filename = handle.get_parent_filename()
         if parent_filename:
-            parent = _parent_path(path, parent_filename)
-            if not parent.exists():
-                raise NtfsDumpError(f"Parent VMDK was not found: {parent_filename}")
+            parent = _resolve_parent(path, parent_filename)
             parent_chain = open_vmdk_chain(parent, seen)
             handles.extend(parent_chain.handles)
             try:

@@ -78,7 +78,7 @@ vm.vmsd
 - `--help`, `-h`: Show help message.
 - `--version`, `-V`: Display program version.
 - `--quiet`, `-q`: Suppress normal stdout output. Errors are still written to stderr.
-- `--flat`: Extract all artifacts purely into a single folder without reconstructing directories.
+- `--flat`: Extract all artifacts purely into a single folder without reconstructing directories. Directory names are joined into the filename with `_` (e.g. `/Windows/System32/cmd.exe` -> `Windows_System32_cmd.exe`) so that same-name files from different directories stay apart.
 - `--volume`, `-n`: Target specific NTFS volume number (default: auto-detects main OS volume).
 - `--snapshot`, `-s`: Read the NTFS as it was at the given VMware snapshot. The ID is the snapshot UID shown by `--list-snapshots`. Without it, the VM's current state is read.
 - `--disk`, `-d`: Read a specific VMware virtual disk by ID (default: auto-select when unique).

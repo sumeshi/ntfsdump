@@ -63,7 +63,11 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--flat", action="store_true",
-        help="save files flatly instead of reconstructing the tree (default: False)."
+        help=(
+            "save files flatly, joining the directory names into the filename "
+            "with '_' (e.g. Windows_System32_cmd.exe), instead of "
+            "reconstructing the tree (default: False)."
+        )
     )
     parser.add_argument(
         "--output", "-o", type=str, default=".",

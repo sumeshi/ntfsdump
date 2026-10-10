@@ -36,13 +36,36 @@ def test_parse_vmsd_snapshots_and_parents():
     assert snapshots[2].disks[1].filename == 'Data-000001.vmdk'
 
 
-def test_current_disks_follow_snapshot_current():
+def test_current_disks_follow_vmx_not_snapshot_current():
+    """The current state is the .vmx disk set, not .vmsd's snapshot.current.
+
+    The WindowsVM fixture has snapshot.current='3', whose delta disks are
+    Windows-000003.vmdk / Data-000001.vmdk; they are NOT the current state
+    of the VM as referenced by the .vmx.
+    """
     vm = VmwareVM(WINDOWS_VM)
 
+    assert vm.current_uid == '3'
     assert [(disk.id, disk.path.name) for disk in vm.current_disks()] == [
-        (0, 'Windows-000003.vmdk'),
-        (1, 'Data-000001.vmdk'),
+        (0, 'Windows.vmdk'),
+        (1, 'Data.vmdk'),
     ]
+
+
+def test_resolve_current_state_disk():
+    """Without --snapshot, resolve_disk() selects the .vmx disks."""
+    vm = VmwareVM(WINDOWS_VM)
+
+    assert vm.resolve_disk(disk=0).name == 'Windows.vmdk'
+    assert vm.resolve_disk(disk=1).name == 'Data.vmdk'
+
+
+def test_snapshot_disks_differ_from_current():
+    """--snapshot keeps selecting the snapshot delta disks."""
+    vm = VmwareVM(WINDOWS_VM)
+
+    assert vm.resolve_disk('3', disk=0).name == 'Windows-000003.vmdk'
+    assert vm.disks_for('3')[0].path.name == 'Windows-000003.vmdk'
 
 
 def test_resolve_disk_for_snapshot_and_disk_id():

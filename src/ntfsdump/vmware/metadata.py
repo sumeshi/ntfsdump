@@ -318,10 +318,16 @@ class VmwareVM:
         return sorted(disks, key=lambda disk: disk.id)
 
     def current_disks(self) -> List[VirtualDiskInfo]:
-        if self.current_uid:
-            snapshot = self.get_snapshot(self.current_uid)
-            if snapshot is not None:
-                return self._snapshot_disks(snapshot)
+        """Disks of the VM's current state.
+
+        ``.vmsd``'s ``snapshot.current`` is the LEAF UID of the snapshot
+        tree, not a guarantee that the VM is currently running on those
+        delta files (snapshots may have been deleted or reverted since).
+        The VM's current state is what the .vmx references, so the VMX
+        disks always take priority; snapshot-specific disks are only
+        selected via ``disks_for()`` when a snapshot is requested
+        explicitly.
+        """
         return list(self.disks)
 
     def disks_for(self, snapshot_id) -> List[VirtualDiskInfo]:
