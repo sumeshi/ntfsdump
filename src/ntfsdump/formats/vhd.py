@@ -22,22 +22,52 @@ class VhdChain:
     handles: List["pyvhdi.file"] = field(default_factory=list)
 
 
-def _parent_path(child: Path, parent_filename: str) -> Path:
-    """Resolve a parent filename relative to the child image.
+def _parent_candidates(child: Path, parent_filename: str) -> List[Path]:
+    """Candidate paths for a parent disk referenced by ``parent_filename``.
 
-    VHDX parent locators may contain absolute Windows paths (e.g.
-    ``C:\\VMs\\Base\\disk.vhdx``). Those cannot be resolved on other
-    platforms, so only the basename is used and looked up next to the child.
+    A Windows absolute path from the original host (e.g.
+    ``C:\\VMs\\Base\\disk.vhdx``) is tried verbatim first — but only when it
+    is actually usable as an absolute path on this platform, so that a POSIX
+    run never resolves it relative to the current working directory. Next,
+    the drive-stripped path is tried relative to the child directory (covers
+    copied trees that keep their subdirectory structure), and the basename
+    fallback stays last for images copied together "flat".
     """
     normalized = parent_filename.replace('\\', '/')
 
-    if _WINDOWS_ABSOLUTE_RE.match(parent_filename) or normalized.startswith('//'):
-        return child.parent / Path(normalized).name
+    if _WINDOWS_ABSOLUTE_RE.match(parent_filename):
+        candidates: List[Path] = []
+        verbatim = Path(parent_filename)
+        if verbatim.is_absolute():
+            candidates.append(verbatim)
+        stripped = normalized.split(':', 1)[1].lstrip('/')
+        candidates.append(child.parent / stripped)
+        candidates.append(child.parent / Path(normalized).name)
+    elif normalized.startswith('//'):
+        # UNC paths from the original host are only looked up by basename.
+        candidates = [child.parent / Path(normalized).name]
+    else:
+        parent = Path(normalized)
+        if parent.is_absolute():
+            candidates = [parent]
+        else:
+            candidates = [child.parent / parent]
 
-    parent = Path(normalized)
-    if parent.is_absolute():
-        return parent
-    return child.parent / parent
+    unique: List[Path] = []
+    for candidate in candidates:
+        if candidate not in unique:
+            unique.append(candidate)
+    return unique
+
+
+def _resolve_parent(child: Path, parent_filename: str, parent_label: str) -> Path:
+    """Pick the first existing candidate parent path."""
+    for candidate in _parent_candidates(child, parent_filename):
+        if candidate.exists():
+            return candidate
+    raise NtfsDumpError(
+        f"Parent {parent_label} was not found: {parent_filename}"
+    )
 
 
 def _safe_close(handle) -> None:
@@ -78,11 +108,7 @@ def open_vhdx_chain(path: Path, _seen: Optional[List[Path]] = None) -> VhdChain:
 
         parent_filename = handle.get_parent_filename()
         if parent_filename:
-            parent = _parent_path(path, parent_filename)
-            if not parent.exists():
-                raise NtfsDumpError(
-                    f"Parent {parent_label} was not found: {parent_filename}"
-                )
+            parent = _resolve_parent(path, parent_filename, parent_label)
             parent_chain = open_vhdx_chain(parent, seen)
             handles.extend(parent_chain.handles)
             try:

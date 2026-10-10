@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from ntfsdump import ntfsdump
+from ntfsdump.errors import NtfsDumpError
 
 
 def calc_md5(path: Path) -> str:
@@ -23,15 +24,31 @@ def calc_md5(path: Path) -> str:
         'f1c9645dbc14efddc7d8a322685f26eb'
     }),
 ])
-def test_ntfsdump(query: str, hash_list: set[str]):
+def test_ntfsdump(query: str, hash_list: set[str], prepare_ntfsfile, tmp_path):
     # extraction via python-module
-    cachedir = Path(__file__).parent / 'cache'
-
     ntfsdump(
-        source=cachedir / 'ntfs.raw',
+        source=prepare_ntfsfile,
         paths=[query],
-        output=cachedir,
+        output=tmp_path,
     )
-    created_files = cachedir.glob('**/*[!raw]')
+    created_files = tmp_path.rglob('*')
     cache_hash_list = {calc_md5(f) for f in created_files}
     assert hash_list <= cache_hash_list
+
+
+def test_missing_query_is_reported_as_not_found(prepare_ntfsfile, tmp_path):
+    with pytest.raises(NtfsDumpError, match='Query path was not found'):
+        ntfsdump(
+            source=prepare_ntfsfile,
+            paths=['/ntfsdump-missing-file-for-regression-test'],
+            output=tmp_path,
+        )
+    assert not list(tmp_path.iterdir())
+
+
+def test_ntfsdump_creates_renamed_output_file(prepare_ntfsfile, tmp_path):
+    output = tmp_path / 'renamed-mft.bin'
+    ntfsdump(source=prepare_ntfsfile, paths=['/$MFT'], output=output, output_file=True)
+
+    assert calc_md5(output) == 'edb7605e808ec25c8e5feea382a49047'
+    assert list(tmp_path.iterdir()) == [output]

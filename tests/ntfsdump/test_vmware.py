@@ -36,13 +36,36 @@ def test_parse_vmsd_snapshots_and_parents():
     assert snapshots[2].disks[1].filename == 'Data-000001.vmdk'
 
 
-def test_current_disks_follow_snapshot_current():
+def test_current_disks_follow_vmx_not_snapshot_current():
+    """The current state is the .vmx disk set, not .vmsd's snapshot.current.
+
+    The WindowsVM fixture has snapshot.current='3', whose delta disks are
+    Windows-000003.vmdk / Data-000001.vmdk; they are NOT the current state
+    of the VM as referenced by the .vmx.
+    """
     vm = VmwareVM(WINDOWS_VM)
 
+    assert vm.current_uid == '3'
     assert [(disk.id, disk.path.name) for disk in vm.current_disks()] == [
-        (0, 'Windows-000003.vmdk'),
-        (1, 'Data-000001.vmdk'),
+        (0, 'Windows.vmdk'),
+        (1, 'Data.vmdk'),
     ]
+
+
+def test_resolve_current_state_disk():
+    """Without --snapshot, resolve_disk() selects the .vmx disks."""
+    vm = VmwareVM(WINDOWS_VM)
+
+    assert vm.resolve_disk(disk=0).name == 'Windows.vmdk'
+    assert vm.resolve_disk(disk=1).name == 'Data.vmdk'
+
+
+def test_snapshot_disks_differ_from_current():
+    """--snapshot keeps selecting the snapshot delta disks."""
+    vm = VmwareVM(WINDOWS_VM)
+
+    assert vm.resolve_disk('3', disk=0).name == 'Windows-000003.vmdk'
+    assert vm.disks_for('3')[0].path.name == 'Windows-000003.vmdk'
 
 
 def test_resolve_disk_for_snapshot_and_disk_id():
@@ -144,3 +167,49 @@ def test_snapshot_disks_without_node_get_unique_ids(tmp_path):
     ids = [disk.id for disk in vm.current_disks()]
 
     assert len(ids) == len(set(ids))
+
+
+@pytest.mark.parametrize('reference', [
+    '../outside.vmdk', '/outside.vmdk', 'C:\\outside\\disk.vmdk',
+    '\\\\server\\share\\disk.vmdk', '//server/share/disk.vmdk',
+])
+@pytest.mark.parametrize('snapshot', [False, True])
+def test_vm_disk_references_reject_external_paths(tmp_path, monkeypatch, reference, snapshot):
+    vmx = tmp_path / 'vm.vmx'
+    vmx.write_text('scsi0:0.fileName = "local.vmdk"\n')
+    if snapshot:
+        (tmp_path / 'vm.vmsd').write_text('\n'.join([
+            'snapshot0.uid = "1"', 'snapshot0.numDisks = "1"',
+            f'snapshot0.disk0.fileName = "{reference}"',
+        ]))
+    else:
+        vmx.write_text(f'scsi0:0.fileName = "{reference}"\n')
+    original_stat = Path.stat
+
+    def local_stat(path, *args, **kwargs):
+        assert path.is_relative_to(tmp_path), f'External path probed: {path}'
+        return original_stat(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, 'stat', local_stat)
+    with pytest.raises(NtfsDumpError, match='image (reference|directory)'):
+        vm = VmwareVM(tmp_path)
+        vm.resolve_disk(snapshot='1' if snapshot else None)
+
+
+@pytest.mark.parametrize('metadata', [False, True])
+def test_vm_discovery_rejects_external_symlinks(tmp_path, metadata):
+    evidence = tmp_path / 'evidence'
+    evidence.mkdir()
+    outside = tmp_path / ('outside.vmx' if metadata else 'outside.vmdk')
+    outside.write_text('scsi0:0.fileName = "disk.vmdk"\n' if metadata else '# Disk DescriptorFile\n')
+    (evidence / ('vm.vmx' if metadata else 'disk.vmdk')).symlink_to(outside)
+
+    with pytest.raises(NtfsDumpError, match='symlink or junction'):
+        VmwareVM(evidence)
+
+
+def test_vm_disk_subdirectory_and_windows_separators_are_supported(tmp_path):
+    (tmp_path / 'disks').mkdir()
+    (tmp_path / 'vm.vmx').write_text('scsi0:0.fileName = "disks\\base.vmdk"\n')
+
+    assert VmwareVM(tmp_path).resolve_disk() == tmp_path / 'disks' / 'base.vmdk'

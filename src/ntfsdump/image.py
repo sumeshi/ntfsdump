@@ -23,6 +23,18 @@ NTFS_VOLUME_DESCRIPTIONS = (
     'Windows Recovery Environment',
 )
 
+# Directory structure that distinguishes a Windows OS volume from recovery,
+# data and EFI volumes. The first entry is the primary indicator; a volume is
+# considered an OS volume only when it is present together with another one,
+# so that a bare data volume carrying a stray "/Windows" folder is not enough.
+_OS_INDICATOR_PATHS = (
+    '/Windows',
+    '/Program Files',
+    '/Program Files (x86)',
+    '/ProgramData',
+    '/Users',
+)
+
 
 def is_ntfs_volume_description(description: str) -> bool:
     """Whether a pytsk3 volume description marks an NTFS partition candidate.
@@ -58,10 +70,10 @@ class ImageFile:
             f"[analyze] {len(self.volumes)} volumes were detected as NTFS volumes.",
             'system',
         )
-        for index, item in enumerate(self.volumes):
-            logger.log(f"[analyze] NTFS Volume {index}: {item.description}", 'system')
+        for item in self.volumes:
+            logger.log(f"[analyze] NTFS Volume {item.addr}: {item.description}", 'system')
         logger.log(
-            f"[analyze] Volume {self.volumes.index(self.main_volume)} was automatically detected as the main partition.",
+            f"[analyze] Volume {self.main_volume.addr} was selected as the main partition.",
             'system',
         )
 
@@ -102,6 +114,29 @@ class ImageFile:
 
         return result
 
+    def __os_volume_markers(self, volume: NtfsVolume) -> bool:
+        """Whether an NTFS volume looks like a Windows OS volume.
+
+        Checking the actual directory tree keeps the decision independent of
+        GPT/MBR partition labels (e.g. a WinRE partition is also labeled
+        "Basic data partition" on some layouts).
+        """
+        has_windows_dir = False
+        markers = 0
+        for path in _OS_INDICATOR_PATHS:
+            try:
+                f = volume.fs_info.open(path)
+            except Exception:
+                continue
+            if f.info.name.type == pytsk3.TSK_FS_NAME_TYPE_DIR:
+                markers += 1
+                if path == '/Windows':
+                    has_windows_dir = True
+        return has_windows_dir and markers >= 2
+
+    def __os_volume_candidates(self) -> List[NtfsVolume]:
+        return [item for item in self.volumes if self.__os_volume_markers(item)]
+
     def __auto_detect_main_partition(self, volume_num: Optional[int]) -> NtfsVolume:
         if volume_num is not None:
             for item in self.volumes:
@@ -112,5 +147,26 @@ class ImageFile:
             # windows xp ~ vista
             return self.volumes[0]
         else:
-            # windows 7 ~ or generalized: because first ntfs partition is usually recovery
-            return self.volumes[-1]
+            # Identify the OS volume from the NTFS directory structure;
+            # Windows 10/11 layouts (EFI, MSR, OS, WinRE, data...) must not
+            # fall back to a guess such as "the last volume".
+            candidates = self.__os_volume_candidates()
+            if len(candidates) == 1:
+                return candidates[0]
+
+            listing = ', '.join(
+                f"{item.addr}: {item.description}" for item in self.volumes
+            )
+            if not candidates:
+                raise NtfsDumpError(
+                    f"Multiple NTFS volumes were found, but none of them looks "
+                    f"like a Windows OS volume: {listing}. "
+                    f"Use --volume to select the main volume explicitly."
+                )
+            listing = ', '.join(
+                f"{item.addr}: {item.description}" for item in candidates
+            )
+            raise NtfsDumpError(
+                f"Multiple NTFS volumes look like Windows OS volumes: "
+                f"{listing}. Use --volume to select the main volume explicitly."
+            )

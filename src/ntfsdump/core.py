@@ -4,6 +4,7 @@ from typing import Optional, Union
 
 from ntfsdump.image import ImageFile
 from ntfsdump.logger import MetaData
+from ntfsdump.errors import NtfsDumpError
 
 
 def ntfsdump(
@@ -16,6 +17,7 @@ def ntfsdump(
     disk: Optional[int] = None,
     flat: bool = False,
     quiet: bool = False,
+    output_file: bool = False,
 ) -> None:
     """A tool for extracting files from an NTFS volume on a disk image.
 
@@ -31,8 +33,12 @@ def ntfsdump(
         flat (bool, optional): reconstruct directory tree or not. Defaults to False.
         quiet (bool, optional): suppress progress lines on stdout.
             Errors are still written to stderr. Defaults to False.
+        output_file (bool, optional): treat output as a file path. Requires one file or ADS query.
     """
     MetaData.quiet = quiet
+    output_path = Path(output).absolute()
+    if (output_file or output_path.is_file()) and len(paths) != 1:
+        raise NtfsDumpError("File output requires a single file or ADS query.")
     img = ImageFile(
         source,
         volume=volume,
@@ -40,7 +46,5 @@ def ntfsdump(
         snapshot=snapshot,
         disk=disk,
     )
-    output_dir = Path(output).resolve()
-
     for query in paths:
-        img.main_volume.dump_files(query, output_dir, flat)
+        img.main_volume.dump_files(query, output_path, flat, output_file=output_file)
