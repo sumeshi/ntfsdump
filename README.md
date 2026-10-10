@@ -88,6 +88,11 @@ vm.vmsd
 - `--log [FILE]`: Enable logging. Optionally specify a log file path.
 - `--output`, `-o`: Directory or file to save exported outputs.
 
+Each file is extracted to a temporary file in the output directory and placed at
+its destination only after extraction succeeds. In normal mode, successful
+extraction replaces an existing file; failed extraction leaves it unchanged.
+With `--flat`, conflicting output names receive a unique suffix instead.
+
 
 #### Examples
 

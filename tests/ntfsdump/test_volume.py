@@ -182,6 +182,108 @@ def test_dump_files_mid_read_error_removes_partial_output(tmp_path):
     assert not (destination / 'boom.bin').exists()
 
 
+@pytest.mark.parametrize('ads', [False, True])
+@pytest.mark.parametrize('failure', ['eof', 'read_error'])
+def test_dump_files_failed_read_preserves_existing_file(tmp_path, ads, failure):
+    fs = FakeFSInfo()
+    size = BUFF_SIZE * 2
+
+    class Boom(IOError):
+        offset = BUFF_SIZE
+
+    query = '/file.bin:zone' if ads else '/file.bin'
+    attributes = [FakeAttribute(b'zone', size)] if ads else []
+    fs.add(
+        query, size=size, data=_pattern(size), attributes=attributes,
+        eof_after=BUFF_SIZE if failure == 'eof' else None,
+        error=Boom('disk went away') if failure == 'read_error' else None,
+    )
+    destination = tmp_path / 'out'
+    destination.mkdir()
+    target = destination / ('file.bin_zone' if ads else 'file.bin')
+    target.write_bytes(b'existing evidence')
+
+    with pytest.raises(NtfsDumpError if failure == 'eof' else Boom):
+        make_volume(tmp_path, fs).dump_files(query, destination)
+
+    assert target.read_bytes() == b'existing evidence'
+    assert list(destination.iterdir()) == [target]
+
+
+@pytest.mark.parametrize('data', [b'', b'new evidence'])
+@pytest.mark.parametrize('explicit_output', [False, True])
+def test_dump_files_success_replaces_existing_file(tmp_path, data, explicit_output, monkeypatch):
+    fs = FakeFSInfo()
+    fs.add('/file.bin', size=len(data), data=data)
+    target = tmp_path / 'file.bin'
+    target.write_bytes(b'existing evidence')
+    original_read = FakeFile.read_random
+
+    def read_random(f, *args):
+        assert target.read_bytes() == b'existing evidence'
+        return original_read(f, *args)
+
+    monkeypatch.setattr(FakeFile, 'read_random', read_random)
+    make_volume(tmp_path, fs).dump_files(
+        '/file.bin', target if explicit_output else tmp_path,
+    )
+
+    assert target.read_bytes() == data
+    assert list(tmp_path.iterdir()) == [target]
+
+
+@pytest.mark.parametrize('data', [b'', b'new evidence'])
+@pytest.mark.parametrize('existing', [False, True])
+def test_dump_files_failed_replace_preserves_destination(tmp_path, monkeypatch, data, existing):
+    fs = FakeFSInfo()
+    fs.add('/file.bin', size=len(data), data=data)
+    target = tmp_path / 'file.bin'
+    if existing:
+        target.write_bytes(b'existing evidence')
+
+    def fail_replace(source, destination):
+        assert source.read_bytes() == data
+        assert destination == target
+        raise PermissionError('cannot replace destination')
+
+    monkeypatch.setattr(Path, 'replace', fail_replace)
+    with pytest.raises(PermissionError, match='cannot replace destination'):
+        make_volume(tmp_path, fs).dump_files('/file.bin', tmp_path)
+
+    if existing:
+        assert target.read_bytes() == b'existing evidence'
+    assert list(tmp_path.iterdir()) == ([target] if existing else [])
+
+
+@pytest.mark.parametrize('data', [b'', b'new evidence'])
+def test_dump_files_named_output_directory_keeps_fallback(tmp_path, data):
+    fs = FakeFSInfo()
+    fs.add('/file.bin', size=len(data), data=data)
+    destination = tmp_path / 'file.bin'
+    destination.mkdir()
+
+    make_volume(tmp_path, fs).dump_files('/file.bin', destination)
+
+    target = destination / 'file.bin'
+    assert target.read_bytes() == data
+    assert list(destination.iterdir()) == [target]
+
+
+@pytest.mark.parametrize('data', [b'', b'new evidence'])
+def test_dump_files_directory_at_tree_target_is_preserved(tmp_path, data):
+    fs = FakeFSInfo()
+    fs.add('/file.bin', size=len(data), data=data)
+    target = tmp_path / 'file.bin'
+    target.mkdir()
+
+    with pytest.raises(NtfsDumpError, match='Destination path is an existing directory'):
+        make_volume(tmp_path, fs).dump_files('/file.bin', tmp_path)
+
+    assert target.is_dir()
+    assert list(tmp_path.iterdir()) == [target]
+    assert list(target.iterdir()) == []
+
+
 def test_dump_files_empty_file_written_without_reads(tmp_path):
     fs = FakeFSInfo()
     fs.add('/empty.bin', size=0, data=b'')

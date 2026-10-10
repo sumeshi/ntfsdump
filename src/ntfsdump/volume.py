@@ -1,6 +1,7 @@
 # coding: utf-8
 import pytsk3
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import List, Optional
 
 from ntfsdump.errors import NtfsDumpError
@@ -171,17 +172,23 @@ class NtfsVolume:
         size: int,
         ads_attribute=None,
     ) -> None:
-        """Read the stream in chunks and write it directly to disk.
+        """Read the stream in chunks and replace the destination on success.
 
         Extraction memory does not grow with the file size. If the stream
-        ends before ``size`` bytes have been read, the partial output is
-        removed and the failure is raised (never reported as success).
+        fails, only the temporary output is removed; an existing destination
+        is preserved. Successful extraction replaces an existing file.
         """
         destination_path.parent.mkdir(parents=True, exist_ok=True)
 
-        failed = True
+        if destination_path.is_dir():
+            raise IsADirectoryError(f"Destination path is an existing directory: {destination_path}")
+
+        out = NamedTemporaryFile(
+            mode='wb', dir=destination_path.parent, prefix='.ntfsdump-', delete=False,
+        )
+        temporary_path = Path(out.name)
         try:
-            with destination_path.open('wb') as out:
+            with out:
                 offset = 0
                 while offset < size:
                     available_to_read = min(BUFF_SIZE, size - offset)
@@ -201,14 +208,12 @@ class NtfsVolume:
                         )
                     out.write(data)
                     offset += len(data)
-            failed = False
+            temporary_path.replace(destination_path)
         finally:
-            if failed:
-                try:
-                    if destination_path.exists():
-                        destination_path.unlink()
-                except OSError:
-                    pass
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     def dump_files(self, query: str, destination_path: Path, flat: bool = False) -> None:
         query = self.__clean_query(query)
@@ -293,12 +298,7 @@ class NtfsVolume:
                 target = self.__resolve_flat_collision(target, mft_entry)
 
         try:
-            if size == 0:
-                # An empty file (or an empty stream) is written directly.
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(b"")
-            else:
-                self.__write_stream(f, target, size, ads_attribute)
+            self.__write_stream(f, target, size, ads_attribute)
 
         except IsADirectoryError:
             if target != destination_path:
@@ -313,9 +313,6 @@ class NtfsVolume:
             target = destination_path / (flat_name if flat else output_name)
             if flat:
                 target = self.__resolve_flat_collision(target, mft_entry)
-            if size == 0:
-                target.write_bytes(b"")
-            else:
-                self.__write_stream(f, target, size, ads_attribute)
+            self.__write_stream(f, target, size, ads_attribute)
 
         logger.log(f"[dumped] {target}", 'info')
