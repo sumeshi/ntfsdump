@@ -9,13 +9,12 @@ from ntfsdump.core import ntfsdump
 from ntfsdump.errors import NtfsDumpError
 from ntfsdump.formats import VALID_IMAGE_FORMATS
 from ntfsdump.formats.vmdk import probe_media_size
-from ntfsdump.logger import AUTO_LOG, MetaData, configure_logging
+from ntfsdump.logger import AUTO_LOG, MetaData, configure_logging, get_logger
 from ntfsdump.sources import SourceResolver, VmwareSource
 from ntfsdump.vmware import (
     NO_DISKS_MESSAGE,
     NO_SNAPSHOT_METADATA_MESSAGE,
 )
-
 
 _EPILOG = """\
 examples:
@@ -44,7 +43,7 @@ examples:
 
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog='ntfsdump',
+        prog="ntfsdump",
         description=(
             "An efficient tool for extracting files directly from NTFS images "
             "and VMware VM directories without mounting them."
@@ -54,83 +53,115 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     # Optional arguments
+    parser.add_argument("--version", "-V", action="version", version=MetaData.version)
     parser.add_argument(
-        "--version", "-V", action="version", version=MetaData.version
+        "--quiet",
+        "-q",
+        action="store_true",
+        help="suppress standard output. Errors are still written to stderr.",
     )
     parser.add_argument(
-        "--quiet", "-q", action="store_true",
-        help="suppress standard output. Errors are still written to stderr."
-    )
-    parser.add_argument(
-        "--flat", action="store_true",
+        "--flat",
+        action="store_true",
         help=(
             "save files flatly, joining the directory names into the filename "
             "with '_' (e.g. Windows_System32_cmd.exe), instead of "
             "reconstructing the tree (default: False)."
-        )
+        ),
     )
     parser.add_argument(
-        "--output", "-o", type=str, default=".",
-        help="output directory or existing file; use --output-file for a new file (default: current dir '.')."
+        "--output",
+        "-o",
+        type=str,
+        default=".",
+        help=(
+            "output directory or existing file; use --output-file for a new file "
+            "(default: current dir '.')."
+        ),
     )
     parser.add_argument(
-        "--output-file", action="store_true",
-        help="treat --output/-o as a file path; requires one file or ADS query."
+        "--output-file",
+        action="store_true",
+        help="treat --output/-o as a file path; requires one file or ADS query.",
     )
     parser.add_argument(
-        "--volume", "-n", type=int, default=None,
-        help="target NTFS partition address shown in analysis logs (default: auto-detect main OS volume)."
+        "--volume",
+        "-n",
+        type=int,
+        default=None,
+        help=(
+            "target NTFS partition address shown in analysis logs "
+            "(default: auto-detect main OS volume)."
+        ),
     )
     parser.add_argument(
-        "--snapshot", "-s", type=str, default=None,
+        "--snapshot",
+        "-s",
+        type=str,
+        default=None,
         help=(
             "VMware snapshot UID to read, as shown by --list-snapshots. "
             "Reads the NTFS as it was at that point in time, directly from the "
             "delta chain (default: current VM state)."
-        )
+        ),
     )
     parser.add_argument(
-        "--disk", "-d", type=int, default=None,
+        "--disk",
+        "-d",
+        type=int,
+        default=None,
         help=(
             "VMware virtual disk ID to read, as shown by --list-disks. "
             "With a single disk it is selected automatically; with multiple "
             "disks this option is required."
-        )
+        ),
     )
     parser.add_argument(
-        "--list-snapshots", action="store_true",
+        "--list-snapshots",
+        action="store_true",
         help=(
             "list VMware snapshots (ID/NAME/CREATED/PARENT) found in the "
             "SOURCE and exit. Pass an ID to --snapshot/-s to read that state."
-        )
+        ),
     )
     parser.add_argument(
-        "--list-disks", action="store_true",
+        "--list-disks",
+        action="store_true",
         help=(
             "list VMware virtual disks (ID/NODE/SIZE/VMDK) found in the "
             "SOURCE and exit. Pass an ID to --disk/-d to read that disk."
-        )
+        ),
     )
     parser.add_argument(
-        "--image-format", type=str, default=None, choices=list(VALID_IMAGE_FORMATS),
-        help="force the input image format instead of auto-detection."
+        "--image-format",
+        type=str,
+        default=None,
+        choices=list(VALID_IMAGE_FORMATS),
+        help="force the input image format instead of auto-detection.",
     )
     parser.add_argument(
-        "--log", nargs='?', const=AUTO_LOG, default=None, metavar='FILE',
+        "--log",
+        nargs="?",
+        const=AUTO_LOG,
+        default=None,
+        metavar="FILE",
         help=(
             "enable logging, which is disabled by default. Optionally specify "
             "a log file path (default: auto-generated name)."
-        )
+        ),
     )
 
     # Positional arguments
     parser.add_argument(
-        "source", type=str,
-        help="disk image file, VMware VM directory, VMX or VMSD path."
+        "source",
+        type=str,
+        help="disk image file, VMware VM directory, VMX or VMSD path.",
     )
     parser.add_argument(
-        "paths", nargs='*', type=str,
-        help="internal NTFS file or directory paths to extract (e.g. '/$MFT')."
+        "paths",
+        nargs="*",
+        type=str,
+        help="internal NTFS file or directory paths to extract (e.g. '/$MFT').",
     )
 
     return parser
@@ -142,7 +173,12 @@ def _collect_paths(args) -> List[str]:
         return paths
     if sys.stdin is not None and not sys.stdin.isatty():
         try:
-            paths += [line.strip() for line in sys.stdin if line.strip()]
+            for line in sys.stdin:
+                # Only the record terminator belongs to the pipe protocol;
+                # spaces and tabs can be part of an NTFS filename or ADS.
+                path = line[:-2] if line.endswith("\r\n") else line.removesuffix("\n")
+                if path:
+                    paths.append(path)
         except (OSError, ValueError):
             pass
     return paths
@@ -153,20 +189,18 @@ def _print_table(rows: Sequence[Sequence[str]]) -> None:
         return
     widths = [max(len(str(row[i])) for row in rows) for i in range(len(rows[0]))]
     for row in rows:
-        line = '  '.join(
-            str(cell).ljust(widths[i]) for i, cell in enumerate(row)
-        )
+        line = "  ".join(str(cell).ljust(widths[i]) for i, cell in enumerate(row))
         print(line.rstrip())
 
 
 def _format_size(size: Optional[int]) -> str:
     if size is None:
-        return '-'
+        return "-"
     for label, factor in (
-        ('TiB', 1 << 40),
-        ('GiB', 1 << 30),
-        ('MiB', 1 << 20),
-        ('KiB', 1 << 10),
+        ("TiB", 1 << 40),
+        ("GiB", 1 << 30),
+        ("MiB", 1 << 20),
+        ("KiB", 1 << 10),
     ):
         if size >= factor:
             value = size / factor
@@ -188,18 +222,21 @@ def _print_snapshots(resolved) -> None:
     if not snapshots:
         raise NtfsDumpError(NO_SNAPSHOT_METADATA_MESSAGE)
 
-    rows: List[Sequence[str]] = [('ID', 'NAME', 'CREATED', 'PARENT')]
+    rows: List[Sequence[str]] = [("ID", "NAME", "CREATED", "PARENT")]
     for snapshot in snapshots:
         created = (
-            snapshot.created_at.strftime('%Y-%m-%d %H:%M:%S')
-            if snapshot.created_at else '-'
+            snapshot.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            if snapshot.created_at
+            else "-"
         )
-        rows.append((
-            str(snapshot.id),
-            snapshot.name or '-',
-            created,
-            str(snapshot.parent_id) if snapshot.parent_id else '-',
-        ))
+        rows.append(
+            (
+                str(snapshot.id),
+                snapshot.name or "-",
+                created,
+                str(snapshot.parent_id) if snapshot.parent_id else "-",
+            )
+        )
     _print_table(rows)
 
 
@@ -209,15 +246,17 @@ def _print_disks(resolved) -> None:
     if not disks:
         raise NtfsDumpError(NO_DISKS_MESSAGE)
 
-    rows: List[Sequence[str]] = [('ID', 'NODE', 'SIZE', 'VMDK')]
+    rows: List[Sequence[str]] = [("ID", "NODE", "SIZE", "VMDK")]
     for disk in disks:
         size = disk.size if disk.size is not None else probe_media_size(disk.path)
-        rows.append((
-            str(disk.id),
-            disk.node,
-            _format_size(size),
-            disk.path.name,
-        ))
+        rows.append(
+            (
+                str(disk.id),
+                disk.node,
+                _format_size(size),
+                disk.path.name,
+            )
+        )
     _print_table(rows)
 
 
@@ -263,17 +302,20 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     try:
         _run(args)
     except NtfsDumpError as exc:
+        get_logger().log_failure(str(exc))
         print(str(exc), file=sys.stderr)
         return 1
     except KeyboardInterrupt:
+        get_logger().log_failure("Interrupted.")
         print("Interrupted.", file=sys.stderr)
         return 130
     except Exception as exc:
         # Convert unexpected backend errors into a clear CLI message instead of
         # dumping a Python traceback for user input problems.
         # Set NTFSDUMP_DEBUG=1 to print the full traceback for troubleshooting.
+        get_logger().log_failure(str(exc) or exc.__class__.__name__)
         print(str(exc) or exc.__class__.__name__, file=sys.stderr)
-        if os.environ.get('NTFSDUMP_DEBUG'):
+        if os.environ.get("NTFSDUMP_DEBUG"):
             print(format_exc(), file=sys.stderr)
         return 1
     return 0

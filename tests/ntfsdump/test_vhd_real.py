@@ -92,7 +92,17 @@ def test_real_vhd_differential_parent_fallback(tmp_path: Path):
 
     img_info = VHDHandler().get_img_info(str(tmp_path / 'child.vhd'))
     try:
+        from ntfsdump.image_paths import ensure_distinct_output
+        from ntfsdump.errors import NtfsDumpError
+        import pytest
+
         assert img_info.get_size() == BLOCK_SIZE
         assert img_info.read(MARKER_OFFSET, 10) == b'PARENTDATA'
+        assert set(img_info.source_paths) == {
+            tmp_path / 'base.vhd', tmp_path / 'child.vhd',
+        }
+        for source in img_info.source_paths:
+            with pytest.raises(NtfsDumpError, match='overwrite an input image'):
+                ensure_distinct_output(source, img_info.source_paths)
     finally:
         img_info.close()

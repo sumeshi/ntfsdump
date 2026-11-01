@@ -7,9 +7,8 @@ import pyvmdk
 
 from ntfsdump.errors import NtfsDumpError
 
-
-VHDX_SIGNATURE = b'vhdxfile'
-VHDX_SUFFIXES = ('.vhdx', '.avhdx')
+VHDX_SIGNATURE = b"vhdxfile"
+VHDX_SUFFIXES = (".vhdx", ".avhdx")
 
 
 def is_vhdx_file(path) -> bool:
@@ -20,7 +19,7 @@ def is_vhdx_file(path) -> bool:
     type, which is handled by the VHDX chain resolver rather than detection.
     """
     try:
-        with Path(path).open('rb') as f:
+        with Path(path).open("rb") as f:
             return f.read(8) == VHDX_SIGNATURE
     except OSError:
         return False
@@ -28,11 +27,11 @@ def is_vhdx_file(path) -> bool:
 
 def _is_vmdk_descriptor(path: Path) -> bool:
     try:
-        with path.open('rb') as f:
+        with path.open("rb") as f:
             head = f.read(64)
     except OSError:
         return False
-    return head.startswith(b'# Disk DescriptorFile') or head.startswith(b'KDMV')
+    return head.startswith(b"# Disk DescriptorFile") or head.startswith(b"KDMV")
 
 
 def detect_image_format(path) -> str:
@@ -50,30 +49,30 @@ def detect_image_format(path) -> str:
 
     try:
         if pyewf.check_file_signature(str(p)):
-            return 'e01'
+            return "e01"
     except Exception:
         pass
 
     try:
         if pyvhdi.check_file_signature(str(p)):
-            return 'vhdx' if is_vhdx_file(p) else 'vhd'
+            return "vhdx" if is_vhdx_file(p) else "vhd"
     except Exception:
         pass
 
     try:
         if pyvmdk.check_file_signature(str(p)):
-            return 'vmdk'
+            return "vmdk"
     except Exception:
         pass
 
     # VMDK descriptors are plain text and may not carry a binary signature.
     if _is_vmdk_descriptor(p):
-        return 'vmdk'
+        return "vmdk"
 
     # VHDX/AVHDX can also be recognized by their file signature (e.g. a .vhdx
     # file with a non-standard extension), or by the .vhdx/.avhdx extension
     # itself (e.g. a file whose signature check was inconclusive).
     if p.suffix.lower() in VHDX_SUFFIXES or is_vhdx_file(p):
-        return 'vhdx'
+        return "vhdx"
 
-    return 'raw'
+    return "raw"

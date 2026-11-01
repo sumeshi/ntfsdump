@@ -2,51 +2,51 @@ name: pytest
 
 on:
   push:
-    branches:
-      - master
-      - develop
+    branches: [master, develop]
   pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   pytest:
-    name: Run tests with pytest
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ['3.13', '3.14']
     steps:
-      - name: checkout
-        uses: actions/checkout@v6
-
-      - name: install python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: setup uv
+      - name: Install locked dependencies
         run: |
-          pip install uv
-          uv sync
-
-      - name: run unit tests
-        run: uv run pytest --ignore=tests/ntfsdump/test__init__.py
-
-      - name: cache NTFS sample archive
+          python -m pip install uv==0.12.23
+          uv sync --locked
+      - name: Check source formatting, lint and types
+        run: |
+          uv run --locked black --check --workers 1 src
+          uv run --locked flake8 src
+          uv run --locked mypy src
+      - name: Cache NTFS sample archive
         id: ntfs-sample
         uses: actions/cache@v4
         with:
           path: tests/ntfsdump/cache/ntfs.tgs
           key: ntfs-sample-79b3b6f3fa173fd0d2a05d0d2693afd0
-
-      - name: download NTFS sample with retries
-        if: steps.ntfs-sample.outputs.cache-hit != 'true'
+      - name: Download and verify NTFS sample
+        shell: bash
         run: |
           mkdir -p tests/ntfsdump/cache
-          curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 \
-            --connect-timeout 15 --max-time 120 \
-            --output tests/ntfsdump/cache/ntfs.tgs.tmp \
-            'https://github.com/msuhanov/ntfs-samples/blob/master/ntfs.tgz?raw=true'
-          mv tests/ntfsdump/cache/ntfs.tgs.tmp tests/ntfsdump/cache/ntfs.tgs
-
-      - name: run sample image E2E tests
-        run: uv run pytest tests/ntfsdump/test__init__.py
+          if [ ! -f tests/ntfsdump/cache/ntfs.tgs ]; then
+            curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 \
+              --connect-timeout 15 --max-time 120 \
+              --output tests/ntfsdump/cache/ntfs.tgs.tmp \
+              'https://github.com/msuhanov/ntfs-samples/blob/master/ntfs.tgz?raw=true'
+            echo '06d69d832f911bd3e09b8331d8d48e1d44a0ad82fdf034addf7d14811ed57db0  tests/ntfsdump/cache/ntfs.tgs.tmp' | sha256sum -c -
+            mv tests/ntfsdump/cache/ntfs.tgs.tmp tests/ntfsdump/cache/ntfs.tgs
+          fi
+          echo '06d69d832f911bd3e09b8331d8d48e1d44a0ad82fdf034addf7d14811ed57db0  tests/ntfsdump/cache/ntfs.tgs' | sha256sum -c -
+      - name: Run all tests, including real-image E2E
+        run: uv run --locked pytest

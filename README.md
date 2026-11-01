@@ -49,6 +49,10 @@ chmod +x ./ntfsdump
 - Image formats: `RAW`, `E01`, `VHD`, `VHDX` (including Hyper-V `AVHDX` differencing disks), `VMDK` (auto-detected), plus VMware VM directories, VMX and VMSD
 - File system: `NTFS`
 - Partition tables: GPT and MBR are both supported
+- GPT partition names can be customized. Logical sector sizes stored in image
+  metadata, including 4096-byte sectors, are preserved during partition parsing.
+- NTFS partition-only images without a partition table are also supported. The
+  filesystem is verified at offset zero and uses volume address `0` with `--volume`.
 
 
 ## Usage
@@ -222,10 +226,13 @@ when necessary.
 Using with [ntfsfind](https://github.com/sumeshi/ntfsfind) over standard input (pipe):
 
 ```bash
-ntfsfind '.*\.evtx' ./image.raw | ntfsdump -o ./dump ./image.raw
+ntfsfind ./image.raw '.*\.evtx' | ntfsdump -o ./dump ./image.raw
 ```
 
 *Note: Any absolute path (starting with `/` or `\`) passed over stdin via tools like `ntfsfind` will automatically be cleaned, and the folder hierarchy will be rebuilt faithfully inside your local output directory (`./dump/Windows/System32/winevt/Logs/System.evtx`).*
+
+Standard input removes only the line ending; spaces in file and stream names
+are preserved.
 
 #### Hyper-V checkpoints (VHDX/AVHDX)
 
@@ -277,6 +284,10 @@ ntfsdump(
 - **Directory**: `/Windows/System32/winevt/Logs` -> extracts all event logs recursively.
 - **Prefix Expansion**: `/Windows/Prefetch/.*` -> extracts all files located in the `Prefetch` directory.
 
+For a named stream, a matching `$DATA` attribute takes priority over other
+attributes with the same name, including directory indexes such as `$I30`.
+If no matching `$DATA` exists, named index attributes can still be extracted.
+
 
 ## Logs
 
@@ -290,6 +301,27 @@ ntfsdump image.raw '/$MFT' --log
 ntfsdump image.raw '/$MFT' --log ./case.log
 ```
 
+Use a log path separate from the input images and extracted files. Extraction
+failures are recorded once the image has been opened safely; earlier setup
+errors are reported on stderr.
+
+
+## Development and releases
+
+Install Python 3.13 or 3.14 and `uv==0.12.23`, then run `uv sync --locked` and
+`uv run --locked pytest`. Linux source builds require a C compiler and Python
+development headers. The tests download and verify a small public NTFS sample.
+
+For Docker, run `docker build -t ntfsdump .` and
+`docker compose run --rm app /data/sample.raw '/$MFT'`.
+The current directory is mounted at `/data`; the image keeps its own dependencies
+at `/app/.venv`. Pass `--output /data/dump` to ntfsdump to retain extracted files.
+
+Releases are triggered by an explicit `v<version>` tag matching
+`src/ntfsdump/__about__.py`. Tests for Python 3.13 and 3.14, both Windows and Linux
+binary builds, and the Python package build must all pass before publication.
+The release workflow uses the repository's `PYPI_TOKEN` secret for PyPI and
+attaches versioned dependency license notices to both binary archives.
 
 ## Contributing
 
@@ -312,7 +344,7 @@ The following libyal libraries are licensed under the [GNU Lesser General Public
 You may obtain, modify, and rebuild them from their upstream sources in accordance with the LGPL.
 
 - [libewf / libewf-python](https://github.com/libyal/libewf)
-  - Bundled version: [`libewf-python==20240506`](https://pypi.org/project/libewf-python/20240506/) (source: https://github.com/libyal/libewf/releases/tag/20240506)
+  - Bundled version: [`libewf-python==20260924`](https://pypi.org/project/libewf-python/20260924/) (source: https://github.com/libyal/libewf/releases/tag/20260924)
   - License text: https://github.com/libyal/libewf/blob/main/COPYING.LESSER
 - [libvhdi / libvhdi-python](https://github.com/libyal/libvhdi)
   - Bundled version: [`libvhdi-python==20260901`](https://pypi.org/project/libvhdi-python/20260901/) (source: https://github.com/libyal/libvhdi/releases/tag/20260901)

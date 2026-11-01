@@ -1,12 +1,11 @@
 # coding: utf-8
 import pytsk3
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from tempfile import NamedTemporaryFile
 from typing import List, Optional
 
 from ntfsdump.errors import NtfsDumpError
 from ntfsdump.logger import get_logger
-
 
 logger = get_logger()
 
@@ -27,7 +26,7 @@ class NtfsVolume:
         description: str,
         start_byte: int,
         end_byte: int,
-        fs_info: pytsk3.FS_Info
+        fs_info: pytsk3.FS_Info,
     ):
         self.path = path
         self.addr = addr
@@ -37,9 +36,9 @@ class NtfsVolume:
         self.fs_info = fs_info
 
     def __clean_query(self, query: str) -> str:
-        cleaned = query.replace('\\', '/')
-        if not cleaned.startswith('/'):
-            cleaned = '/' + cleaned
+        cleaned = query.replace("\\", "/")
+        if not cleaned.startswith("/"):
+            cleaned = "/" + cleaned
         return cleaned
 
     def __is_dir(self, query: str) -> bool:
@@ -49,14 +48,14 @@ class NtfsVolume:
     def __list_artifacts(self, query: str) -> List[str]:
         results: List[str] = []
         for a in self.fs_info.open_dir(query):
-            name = a.info.name.name.decode('utf-8', errors='replace')
-            if name in ('.', '..'):
+            name = a.info.name.name.decode("utf-8", errors="replace")
+            if name in (".", ".."):
                 continue
 
             # Skip deleted/unallocated name entries — these are leftovers in
             # the directory index that no longer represent a live file.
             if not (a.info.name.flags & pytsk3.TSK_FS_NAME_FLAG_ALLOC):
-                logger.log(f"[skipped:deleted] {query}/{name}", 'system')
+                logger.log(f"[skipped:deleted] {query}/{name}", "system")
                 continue
 
             # Skip entries whose MFT record has been reused. The name still
@@ -64,13 +63,13 @@ class NtfsVolume:
             # file (different sequence number), so reading it would return
             # unrelated content (e.g. jpg/png under Prefetch).
             if a.info.meta is None:
-                logger.log(f"[skipped:no-meta] {query}/{name}", 'system')
+                logger.log(f"[skipped:no-meta] {query}/{name}", "system")
                 continue
             if a.info.name.meta_seq != a.info.meta.seq:
                 logger.log(
                     f"[skipped:mft-reused] {query}/{name} "
                     f"(name_seq={a.info.name.meta_seq}, meta_seq={a.info.meta.seq})",
-                    'system',
+                    "system",
                 )
                 continue
 
@@ -94,11 +93,9 @@ class NtfsVolume:
         alternate data stream of the file named before it, so the stream
         name is embedded into the filename instead, keeping it identifiable.
         """
-        if ':' not in filename:
+        if ":" not in filename:
             return filename
-        return filename.translate(
-            {ord(c): '_' for c in _ILLEGAL_FILENAME_CHARS}
-        )
+        return filename.translate({ord(c): "_" for c in _ILLEGAL_FILENAME_CHARS})
 
     def __resolve_collision(
         self,
@@ -160,10 +157,27 @@ class NtfsVolume:
         return bytes(result)
 
     def __find_ads_attribute(self, f, ads: str):
-        for attribute in f:
-            if attribute.info.name == ads.encode('utf-8'):
-                return attribute
-        return None
+        matching = [
+            attribute for attribute in f if attribute.info.name == ads.encode("utf-8")
+        ]
+        if not matching:
+            return None
+
+        # Directory indexes can have an attribute with the same name as an
+        # ADS (for example, the directory's $I30 INDEX_ROOT).  NTFS stream
+        # queries refer to $DATA attributes, so prefer those when the parser
+        # exposes both.  Keep the old named-attribute fallback for callers
+        # that deliberately extract a named non-DATA attribute.  Preserve
+        # parser order among DATA attributes, as before, when a stream has
+        # multiple extents.
+        data_attributes = [
+            attribute
+            for attribute in matching
+            if attribute.info.type == pytsk3.TSK_FS_ATTR_TYPE_NTFS_DATA
+        ]
+        if data_attributes:
+            return data_attributes[0]
+        return matching[0]
 
     def __write_stream(
         self,
@@ -181,10 +195,15 @@ class NtfsVolume:
         destination_path.parent.mkdir(parents=True, exist_ok=True)
 
         if destination_path.is_dir():
-            raise IsADirectoryError(f"Destination path is an existing directory: {destination_path}")
+            raise IsADirectoryError(
+                f"Destination path is an existing directory: {destination_path}"
+            )
 
         out = NamedTemporaryFile(
-            mode='wb', dir=destination_path.parent, prefix='.ntfsdump-', delete=False,
+            mode="wb",
+            dir=destination_path.parent,
+            prefix=".ntfsdump-",
+            delete=False,
         )
         temporary_path = Path(out.name)
         try:
@@ -216,76 +235,96 @@ class NtfsVolume:
                 pass
 
     def dump_files(
-        self, query: str, destination_path: Path, flat: bool = False,
+        self,
+        query: str,
+        destination_path: Path,
+        flat: bool = False,
         output_file: bool = False,
     ) -> None:
         query = self.__clean_query(query)
-        logger.log(f"[query] {query}", 'system')
         file_output = output_file or destination_path.is_file()
 
-        if query.endswith('.*'):
+        if query.endswith(".*"):
             if file_output:
                 raise NtfsDumpError("File output requires a single file or ADS query.")
             # Wildcard expansion (documented as "prefix expansion", e.g.
             # /Windows/Prefetch/.*). Checked first: pytsk3 cannot open the
             # literal ".*" path, so the dir/file checks below would fail.
-            parent_dir, file_prefix = query[:-2].rsplit('/', 1)
-            parent_dir = parent_dir or '/'
+            parent_dir, file_prefix = query[:-2].rsplit("/", 1)
+            parent_dir = parent_dir or "/"
 
             files = [
-                artifact for artifact in self.__list_artifacts(parent_dir)
+                artifact
+                for artifact in self.__list_artifacts(parent_dir)
                 if artifact.startswith(file_prefix)
             ]
             for file in files:
-                newquery = str(Path(parent_dir) / file)
-                self.dump_files(query=newquery, destination_path=destination_path, flat=flat)
+                newquery = str(PurePosixPath(parent_dir) / file)
+                self.dump_files(
+                    query=newquery, destination_path=destination_path, flat=flat
+                )
+            logger.log(f"[query] {query}", "system")
             return
 
         try:
             is_dir = self.__is_dir(query)
         except Exception as e:
-            # shortcut: pytsk3 exposes no missing-path errno, use structured errors if added.
+            # pytsk3 exposes no missing-path errno; use structured errors if added.
             if isinstance(e, FileNotFoundError) or (
-                isinstance(e, OSError) and 'tsk_fs_file_open: path not found:' in str(e)
+                isinstance(e, OSError) and "tsk_fs_file_open: path not found:" in str(e)
             ):
+                logger.log(f"[query] {query}", "system")
                 raise NtfsDumpError(
                     f"Query path was not found in the NTFS volume: {query} ({e})"
                 ) from e
+            logger.log(f"[query] {query}", "system")
             raise NtfsDumpError(
                 f"Unable to read query path in the NTFS volume: {query} ({e})"
             ) from e
 
-        if is_dir:
+        # pytsk3 keeps the directory's name type when opening a stream on it.
+        # An explicit stream query must extract that attribute, not recurse into
+        # the directory and silently return unrelated child files.
+        if is_dir and ":" not in PurePosixPath(query).name:
             if file_output:
                 raise NtfsDumpError("File output requires a single file or ADS query.")
+            if not flat:
+                target = self.__check_output_path(
+                    destination_path,
+                    destination_path.joinpath(*PurePosixPath(query.lstrip("/")).parts),
+                )
+                target.mkdir(parents=True, exist_ok=True)
             for artifact in self.__list_artifacts(query):
-                newquery = str(Path(query) / artifact)
+                newquery = str(PurePosixPath(query) / artifact)
                 # recursive dump
-                self.dump_files(query=newquery, destination_path=destination_path, flat=flat)
+                self.dump_files(
+                    query=newquery, destination_path=destination_path, flat=flat
+                )
+            logger.log(f"[query] {query}", "system")
         else:
             # A regular file, or an exotic entry that is still openable:
             # a failure is reported to the caller instead of being swallowed.
-            self.__dump_file(self.fs_info.open(query), query, destination_path, flat, file_output)
+            self.__dump_file(
+                self.fs_info.open(query), query, destination_path, flat, file_output
+            )
 
-    def __dump_file(self, f, query: str, destination_path: Path, flat: bool, file_output: bool) -> None:
+    def __dump_file(
+        self, f, query: str, destination_path: Path, flat: bool, file_output: bool
+    ) -> None:
         meta = f.info.meta
         if meta is None:
             # An entry without MFT metadata cannot be read reliably; never
             # report an empty (or partial) file as a successful extraction.
-            raise NtfsDumpError(
-                f"MFT metadata was not found for the query: {query}"
-            )
+            raise NtfsDumpError(f"MFT metadata was not found for the query: {query}")
         mft_entry = meta.addr
-        filename = Path(query).name
+        filename = PurePosixPath(query).name
 
         # Alternate Data Stream
-        if ':' in filename:
-            _, ads_name = query.split(':', 1)
+        if ":" in filename:
+            _, ads_name = query.split(":", 1)
             ads_attribute = self.__find_ads_attribute(f, ads_name)
             if ads_attribute is None:
-                raise NtfsDumpError(
-                    f"Alternate data stream was not found: {query}"
-                )
+                raise NtfsDumpError(f"Alternate data stream was not found: {query}")
             size = ads_attribute.info.size
         else:
             ads_attribute = None
@@ -296,8 +335,11 @@ class NtfsVolume:
         # Flat mode joins the whole directory path into the filename
         # (e.g. "/Windows/System32/cmd.exe" -> "Windows_System32_cmd.exe")
         # so that same-name files from different directories stay apart.
-        q_path = Path(query.lstrip('/'))
-        flat_name = self.__safe_filename('_'.join(q_path.parts))
+        # NTFS queries have POSIX separators, independent of the host OS.
+        # In particular, a root file's ADS such as "C:review" is not a
+        # Windows drive-relative path. Sanitize its name before joining it.
+        q_path = PurePosixPath(query.lstrip("/"))
+        flat_name = self.__safe_filename("_".join(q_path.parts))
 
         if file_output:
             target = self.__check_output_path(destination_path, destination_path)
@@ -306,10 +348,13 @@ class NtfsVolume:
                 target = destination_path / flat_name
             else:
                 # Always recreate the directory tree using relative path
-                target = destination_path / q_path.parent / output_name
+                target = destination_path.joinpath(*q_path.parts[:-1], output_name)
             target = self.__check_output_path(destination_path, target)
             if flat or not target.is_dir():
                 target = self.__resolve_collision(target, mft_entry)
+
+        logger.ensure_not_output(target)
+        logger.log(f"[query] {query}", "system")
 
         try:
             self.__write_stream(f, target, size, ads_attribute)
@@ -319,4 +364,4 @@ class NtfsVolume:
                 f"Destination path is an existing directory: {target}"
             ) from None
 
-        logger.log(f"[dumped] {target}", 'info')
+        logger.log(f"[dumped] {target}", "info")

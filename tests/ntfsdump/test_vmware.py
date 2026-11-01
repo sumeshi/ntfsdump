@@ -22,6 +22,21 @@ def test_parse_vmx_detects_disks_and_skips_cdrom():
     assert all(disk.path.parent == WINDOWS_VM for disk in disks)
 
 
+@pytest.mark.parametrize('disk_metadata', [
+    '', 'snapshot0.numDisks = "0"', 'snapshot0.numDisks = "invalid"',
+    'snapshot0.numDisks = "1"\nsnapshot0.disk0.node = "scsi0:0"',
+    'snapshot0.numDisks = "2"\nsnapshot0.disk0.fileName = "old.vmdk"',
+])
+def test_snapshot_without_disk_metadata_never_uses_current_disk(tmp_path, disk_metadata):
+    (tmp_path / 'vm.vmx').write_text('scsi0:0.fileName = "current.vmdk"\n')
+    (tmp_path / 'vm.vmsd').write_text('snapshot0.uid = "1"\n' + disk_metadata)
+    vm = VmwareVM(tmp_path)
+
+    assert vm.resolve_disk().name == 'current.vmdk'
+    with pytest.raises(NtfsDumpError, match='Disk metadata was not found for snapshot 1'):
+        vm.resolve_disk(snapshot='1')
+
+
 def test_parse_vmsd_snapshots_and_parents():
     snapshots = parse_vmsd(WINDOWS_VM / 'WindowsVM.vmsd')
 

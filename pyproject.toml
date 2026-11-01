@@ -11,13 +11,13 @@ requires-python = ">=3.13"
 
 dependencies = [
     "pytsk3==20260715",
-    "libewf-python==20240506",
+    "libewf-python==20260924",
     "libvmdk-python==20260714",
     "libvhdi-python==20260901",
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.33,<2"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
@@ -29,13 +29,21 @@ Repository = "https://github.com/sumeshi/ntfsdump"
 
 [dependency-groups]
 dev = [
-    "black>=26.5.1",
-    "flake8>=7.3.0",
-    "mypy>=2.1.0",
-    "nuitka>=4.1.2",
-    "pytest>=9.0.3",
+    "black>=26.10.1",
+    "flake8>=7.5.0",
+    "mypy>=2.4.1",
+    "nuitka>=4.3.3",
+    "pytest>=9.2.0",
     "zstandard>=0.25.0",
 ]
 
 [project.scripts]
 ntfsdump = 'ntfsdump.cli:main'
+
+[tool.mypy]
+python_version = "3.13"
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["pytsk3", "pyewf", "pyvhdi", "pyvmdk"]
+ignore_missing_imports = true

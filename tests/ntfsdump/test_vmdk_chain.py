@@ -52,6 +52,46 @@ def test_base_only(tmp_path: Path):
     assert chain.handle.get_media_size() == 16 * SECTOR
 
 
+@pytest.mark.parametrize('output_name', [
+    'child.vmdk', 'child-flat.vmdk', 'parent.vmdk', 'parent-flat.vmdk',
+])
+def test_extraction_cannot_replace_vmdk_backing_files(tmp_path, monkeypatch, output_name):
+    from types import SimpleNamespace
+    from ntfsdump.core import ntfsdump
+    from ntfsdump.image import ImageFile
+
+    _descriptor(tmp_path, 'parent.vmdk', [(16, 'parent-flat.vmdk')])
+    child = _descriptor(
+        tmp_path, 'child.vmdk', [(16, 'child-flat.vmdk')], parent='parent.vmdk',
+    )
+    output = tmp_path / output_name
+    original = output.read_bytes()
+    # Open the real VMDK chain; a tiny fixture has no NTFS filesystem.
+    monkeypatch.setattr(
+        ImageFile, '_ImageFile__analyze_partitions',
+        lambda self: [SimpleNamespace(addr=0, description='NTFS')],
+    )
+    with pytest.raises(NtfsDumpError, match='overwrite an input image'):
+        ntfsdump(child, ['/$MFT'], output=output, quiet=True)
+    assert output.read_bytes() == original
+
+
+@pytest.mark.parametrize('log_name', ['parent.vmdk', 'parent-flat.vmdk'])
+def test_log_cannot_modify_vmdk_backing_files(tmp_path, capsys, log_name):
+    from ntfsdump.cli import main
+
+    _descriptor(tmp_path, 'parent.vmdk', [(16, 'parent-flat.vmdk')])
+    child = _descriptor(
+        tmp_path, 'child.vmdk', [(16, 'child-flat.vmdk')], parent='parent.vmdk',
+    )
+    log = tmp_path / log_name
+    original = log.read_bytes()
+
+    assert main([str(child), '/$MFT', '--log', str(log)]) == 1
+    assert 'overwrite an input image' in capsys.readouterr().err
+    assert log.read_bytes() == original
+
+
 def test_base_plus_child(tmp_path: Path):
     _descriptor(tmp_path, 'Windows.vmdk', [(16, 'Windows-flat.vmdk')])
     child = _descriptor(

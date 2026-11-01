@@ -11,7 +11,7 @@ from ntfsdump.errors import NtfsDumpError
 from ntfsdump.formats.base import FormatHandler, BaseImgInfo
 from ntfsdump.formats.detect import is_vhdx_file
 
-_WINDOWS_ABSOLUTE_RE = re.compile(r'^[A-Za-z]:[\\/]')
+_WINDOWS_ABSOLUTE_RE = re.compile(r"^[A-Za-z]:[\\/]")
 
 
 @dataclass
@@ -20,6 +20,7 @@ class VhdChain:
 
     handle: "pyvhdi.file"
     handles: List["pyvhdi.file"] = field(default_factory=list)
+    source_paths: List[Path] = field(default_factory=list)
 
 
 def _parent_candidates(child: Path, parent_filename: str) -> List[Path]:
@@ -33,17 +34,17 @@ def _parent_candidates(child: Path, parent_filename: str) -> List[Path]:
     copied trees that keep their subdirectory structure), and the basename
     fallback stays last for images copied together "flat".
     """
-    normalized = parent_filename.replace('\\', '/')
+    normalized = parent_filename.replace("\\", "/")
 
     if _WINDOWS_ABSOLUTE_RE.match(parent_filename):
         candidates: List[Path] = []
         verbatim = Path(parent_filename)
         if verbatim.is_absolute():
             candidates.append(verbatim)
-        stripped = normalized.split(':', 1)[1].lstrip('/')
+        stripped = normalized.split(":", 1)[1].lstrip("/")
         candidates.append(child.parent / stripped)
         candidates.append(child.parent / Path(normalized).name)
-    elif normalized.startswith('//'):
+    elif normalized.startswith("//"):
         # UNC paths from the original host are only looked up by basename.
         candidates = [child.parent / Path(normalized).name]
     else:
@@ -65,9 +66,7 @@ def _resolve_parent(child: Path, parent_filename: str, parent_label: str) -> Pat
     for candidate in _parent_candidates(child, parent_filename):
         if candidate.exists():
             return candidate
-    raise NtfsDumpError(
-        f"Parent {parent_label} was not found: {parent_filename}"
-    )
+    raise NtfsDumpError(f"Parent {parent_label} was not found: {parent_filename}")
 
 
 def _safe_close(handle) -> None:
@@ -90,27 +89,27 @@ def open_vhdx_chain(path: Path, _seen: Optional[List[Path]] = None) -> VhdChain:
     resolved = path.resolve()
 
     is_vhdx = is_vhdx_file(path)
-    family = 'VHDX' if is_vhdx else 'VHD'
-    parent_label = 'AVHDX' if is_vhdx else 'VHD'
+    family = "VHDX" if is_vhdx else "VHD"
+    parent_label = "AVHDX" if is_vhdx else "VHD"
 
     if resolved in seen:
-        chain = ' -> '.join(p.name for p in seen + [resolved])
-        raise NtfsDumpError(
-            f"Circular {family} parent reference detected: {chain}"
-        )
+        chain = " -> ".join(p.name for p in seen + [resolved])
+        raise NtfsDumpError(f"Circular {family} parent reference detected: {chain}")
     seen.append(resolved)
 
     handles: List["pyvhdi.file"] = []
+    source_paths = [resolved]
     try:
         handle = pyvhdi.file()
         handles.append(handle)
-        handle.open(str(path), mode='r')
+        handle.open(str(path), mode="r")
 
         parent_filename = handle.get_parent_filename()
         if parent_filename:
             parent = _resolve_parent(path, parent_filename, parent_label)
             parent_chain = open_vhdx_chain(parent, seen)
             handles.extend(parent_chain.handles)
+            source_paths.extend(parent_chain.source_paths)
             try:
                 handle.set_parent(parent_chain.handle)
             except Exception as exc:
@@ -127,10 +126,14 @@ def open_vhdx_chain(path: Path, _seen: Optional[List[Path]] = None) -> VhdChain:
             _safe_close(item)
         raise NtfsDumpError(f"Unable to open {family} image: {path} ({exc})") from exc
 
-    return VhdChain(handle=handles[0], handles=handles)
+    return VhdChain(handle=handles[0], handles=handles, source_paths=source_paths)
 
 
 class VHDHandler(FormatHandler):
     def get_img_info(self, path: str) -> pytsk3.Img_Info:
         chain = open_vhdx_chain(Path(path))
-        return BaseImgInfo(chain.handle, keepalive=chain.handles)
+        return BaseImgInfo(
+            chain.handle,
+            keepalive=chain.handles,
+            source_paths=chain.source_paths,
+        )

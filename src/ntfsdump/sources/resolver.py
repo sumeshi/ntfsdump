@@ -14,8 +14,8 @@ from ntfsdump.vmware import VirtualDiskInfo
 class Source:
     """Base class for a resolved SOURCE that can produce a logical disk."""
 
-    format: str = 'raw'
-    path: Optional[Path] = None
+    format: str = "raw"
+    path: Path
 
     def get_img_info(self) -> pytsk3.Img_Info:
         raise NotImplementedError
@@ -36,19 +36,19 @@ class FileSource(Source):
 class RawSource(FileSource):
     """A raw disk image."""
 
-    format = 'raw'
+    format = "raw"
 
 
 class EwfSource(FileSource):
     """An EWF/E01 image (possibly split across multiple segments)."""
 
-    format = 'e01'
+    format = "e01"
 
 
 class VhdSource(FileSource):
     """A VHD image (conectix)."""
 
-    format = 'vhd'
+    format = "vhd"
 
 
 class VhdxSource(FileSource):
@@ -58,28 +58,28 @@ class VhdxSource(FileSource):
     from the VHDX metadata without merging or converting the image.
     """
 
-    format = 'vhdx'
+    format = "vhdx"
 
 
 class VmdkSource(FileSource):
     """A VMDK source, chain-aware for split extents and snapshot chains."""
 
-    format = 'vmdk'
+    format = "vmdk"
 
 
 _SOURCE_CLASSES = {
-    'raw': RawSource,
-    'e01': EwfSource,
-    'vhd': VhdSource,
-    'vhdx': VhdxSource,
-    'vmdk': VmdkSource,
+    "raw": RawSource,
+    "e01": EwfSource,
+    "vhd": VhdSource,
+    "vhdx": VhdxSource,
+    "vmdk": VmdkSource,
 }
 
 
 class VmwareSource(Source):
     """A VMware VM directory, VMX or VMSD resolved into a logical disk."""
 
-    format = 'vmdk'
+    format = "vmdk"
 
     def __init__(
         self,
@@ -104,7 +104,7 @@ class VmwareSource(Source):
 
     def get_img_info(self) -> pytsk3.Img_Info:
         vmdk_path = self.vm.resolve_disk(self.snapshot, self.disk)
-        handler = get_format_handler('vmdk')
+        handler = get_format_handler("vmdk")
         return handler.get_img_info(str(vmdk_path))
 
 
@@ -131,14 +131,14 @@ class SourceResolver:
             return self._resolve_vmware(path, snapshot=snapshot, disk=disk)
 
         suffix = path.suffix.lower()
-        if suffix == '.vmsd':
+        if suffix == ".vmsd":
             return self._resolve_vmware(
                 path.parent,
                 vmsd_path=path,
                 snapshot=snapshot,
                 disk=disk,
             )
-        if suffix == '.vmx':
+        if suffix == ".vmx":
             return self._resolve_vmware(
                 path.parent,
                 vmx_path=path,
@@ -175,7 +175,5 @@ class SourceResolver:
     ) -> VmwareSource:
         vm = VmwareVM(directory, vmx_path=vmx_path, vmsd_path=vmsd_path)
         if vm.vmx_path is None and vm.vmsd_path is None and not vm.disks:
-            raise NtfsDumpError(
-                self.NO_VM_FILES_MESSAGE.format(directory)
-            )
+            raise NtfsDumpError(self.NO_VM_FILES_MESSAGE.format(directory))
         return VmwareSource(vm, snapshot=snapshot, disk=disk)

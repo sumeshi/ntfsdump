@@ -19,19 +19,20 @@ class VmdkChain:
     handle: "pyvmdk.handle"
     handles: List["pyvmdk.handle"] = field(default_factory=list)
     extent_files: List[BinaryIO] = field(default_factory=list)
+    source_paths: List[Path] = field(default_factory=list)
 
 
 def _parent_candidates(child: Path, parent_filename: str, root: Path) -> List[Path]:
     """Map parent hints to local paths inside the initial disk directory."""
-    normalized = parent_filename.replace('\\', '/')
+    normalized = parent_filename.replace("\\", "/")
     windows_path = PureWindowsPath(normalized)
     if windows_path.drive:
         candidates: List[Path] = []
         if len(windows_path.drive) == 2 and windows_path.root:
-            stripped = normalized.split(':', 1)[1].lstrip('/')
+            stripped = normalized.split(":", 1)[1].lstrip("/")
             candidates.append(child.parent / stripped)
         candidates.append(child.parent / windows_path.name)
-    elif normalized.startswith('/'):
+    elif normalized.startswith("/"):
         candidates = [child.parent / Path(normalized).name]
     else:
         candidates = [child.parent / normalized]
@@ -84,27 +85,32 @@ def open_vmdk_chain(
     root = _root if _root is not None else resolved.parent
 
     if resolved in seen:
-        chain = ' -> '.join(p.name for p in seen + [resolved])
+        chain = " -> ".join(p.name for p in seen + [resolved])
         raise NtfsDumpError(f"Circular VMDK parent reference detected: {chain}")
     seen.append(resolved)
 
     handles: List["pyvmdk.handle"] = []
     extent_files: List[BinaryIO] = []
+    source_paths = [resolved]
     try:
         handle = pyvmdk.handle()
         handles.append(handle)
-        handle.open(str(path), mode='r')
-        with resolved.open('rb') as descriptor_file:
-            embedded_descriptor = descriptor_file.read(4) == b'KDMV'
+        handle.open(str(path), mode="r")
+        with resolved.open("rb") as descriptor_file:
+            embedded_descriptor = descriptor_file.read(4) == b"KDMV"
         for extent in handle.extent_descriptors:
             if embedded_descriptor and handle.disk_type in (
-                pyvmdk.disk_types.MONOLITHIC_SPARSE, pyvmdk.disk_types.STREAM_OPTIMIZED,
+                pyvmdk.disk_types.MONOLITHIC_SPARSE,
+                pyvmdk.disk_types.STREAM_OPTIMIZED,
             ):
                 # Embedded extents use the source itself even after it is renamed.
                 extent_path = resolved
             else:
-                extent_path = confined_image_path(resolved.parent, extent.filename, root)
-            extent_files.append(extent_path.open('rb'))
+                extent_path = confined_image_path(
+                    resolved.parent, extent.filename, root
+                )
+            extent_files.append(extent_path.open("rb"))
+            source_paths.append(extent_path)
         handle.open_extent_data_files_as_file_objects(extent_files)
 
         parent_filename = handle.get_parent_filename()
@@ -113,6 +119,7 @@ def open_vmdk_chain(
             parent_chain = open_vmdk_chain(parent, seen, root)
             handles.extend(parent_chain.handles)
             extent_files.extend(parent_chain.extent_files)
+            source_paths.extend(parent_chain.source_paths)
             try:
                 handle.set_parent(parent_chain.handle)
             except Exception as exc:
@@ -128,14 +135,19 @@ def open_vmdk_chain(
             _safe_close(item)
         raise NtfsDumpError(f"Unable to open VMDK: {path} ({exc})") from exc
 
-    return VmdkChain(handle=handles[0], handles=handles, extent_files=extent_files)
+    return VmdkChain(
+        handle=handles[0],
+        handles=handles,
+        extent_files=extent_files,
+        source_paths=source_paths,
+    )
 
 
 def probe_media_size(path: Path) -> Optional[int]:
     """Return the logical size of a VMDK descriptor, or None if unavailable."""
     try:
         handle = pyvmdk.handle()
-        handle.open(str(path), mode='r')
+        handle.open(str(path), mode="r")
         size = handle.get_media_size()
         handle.close()
         return int(size)
@@ -146,4 +158,8 @@ def probe_media_size(path: Path) -> Optional[int]:
 class VMDKHandler(FormatHandler):
     def get_img_info(self, path: str) -> pytsk3.Img_Info:
         chain = open_vmdk_chain(Path(path))
-        return BaseImgInfo(chain.handle, keepalive=chain.handles + chain.extent_files)
+        return BaseImgInfo(
+            chain.handle,
+            keepalive=chain.handles + chain.extent_files,
+            source_paths=chain.source_paths,
+        )

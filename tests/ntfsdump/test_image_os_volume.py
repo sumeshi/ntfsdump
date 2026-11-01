@@ -170,7 +170,7 @@ def test_analysis_logs_use_partition_addresses(tmp_path, monkeypatch, capsys, vo
         make_volume(tmp_path, 5, 'NTFS data', make_fs_info(['/Data'])),
         make_volume(tmp_path, 27, 'NTFS OS', make_fs_info(['/Windows', '/Users'])),
     ]
-    source = SimpleNamespace(get_img_info=lambda: object())
+    source = SimpleNamespace(path=tmp_path, get_img_info=lambda: object())
     monkeypatch.setattr('ntfsdump.image.SourceResolver.resolve', lambda *args, **kwargs: source)
     monkeypatch.setattr(ImageFile, '_ImageFile__analyze_partitions', lambda self: volumes)
 

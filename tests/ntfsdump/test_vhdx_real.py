@@ -115,12 +115,13 @@ def parent_locator_item(parent_name: str, parent_uuid: uuid.UUID) -> bytes:
 
 
 def metadata_region(block_size: int, disk_size: int, disk_uuid: uuid.UUID,
-                    differential: bool, parent_item: bytes = b'') -> bytes:
+                    differential: bool, parent_item: bytes = b'',
+                    logical_sector_size: int = SECTOR) -> bytes:
     items = [
         (GUID_FILE_PARAMS,
          struct.pack('<II', block_size, 2 if differential else 0)),
         (GUID_DISK_SIZE, struct.pack('<Q', disk_size)),
-        (GUID_LOGICAL_SECTOR, struct.pack('<I', SECTOR)),
+        (GUID_LOGICAL_SECTOR, struct.pack('<I', logical_sector_size)),
         (GUID_PHYSICAL_SECTOR, struct.pack('<I', SECTOR)),
         (GUID_DISK_ID, disk_uuid.bytes_le),
     ]
@@ -164,7 +165,9 @@ def bat_region(entries):
 def make_vhdx(path: Path, disk_uuid: uuid.UUID, differential: bool,
               parent_name: str = '', parent_uuid: uuid.UUID = None,
               marker: bool = False,
-              data_write_uuid: 'uuid.UUID | None' = None) -> None:
+              data_write_uuid: 'uuid.UUID | None' = None,
+              logical_sector_size: int = SECTOR,
+              mbr_4kn: bool = False) -> None:
     f = bytearray()
     f += file_type_identifier()
     f += b'\x00' * (0x10000 - len(f))
@@ -179,10 +182,16 @@ def make_vhdx(path: Path, disk_uuid: uuid.UUID, differential: bool,
 
     if differential:
         locator = parent_locator_item(parent_name, parent_uuid)
-        f += metadata_region(BLOCK_SIZE, DISK_SIZE, disk_uuid, True, locator)
+        f += metadata_region(
+            BLOCK_SIZE, DISK_SIZE, disk_uuid, True, locator,
+            logical_sector_size,
+        )
         f += bat_region([0] * NUM_BLOCKS)
     else:
-        f += metadata_region(BLOCK_SIZE, DISK_SIZE, disk_uuid, False)
+        f += metadata_region(
+            BLOCK_SIZE, DISK_SIZE, disk_uuid, False,
+            logical_sector_size=logical_sector_size,
+        )
         entries = [(PAYLOAD_OFFSET // (1024 * 1024) + i) << 20 | 6
                    for i in range(NUM_BLOCKS)]
         f += bat_region(entries)
@@ -191,6 +200,10 @@ def make_vhdx(path: Path, disk_uuid: uuid.UUID, differential: bool,
             block = bytearray(BLOCK_SIZE)
             if marker and i == 0:
                 block[128 * 1024:128 * 1024 + 10] = b'PARENTDATA'
+            if mbr_4kn and i == 0:
+                block[446 + 4] = 0x07
+                struct.pack_into('<II', block, 446 + 8, 256, 768)
+                block[510:512] = b'\x55\xaa'
             f += bytes(block)
 
     path.write_bytes(bytes(f))
@@ -215,3 +228,36 @@ def test_real_vhdx_differential_parent_fallback(tmp_path: Path):
         assert img_info.read(128 * 1024, 10) == b'PARENTDATA'
     finally:
         img_info.close()
+
+
+def test_real_vhdx_mbr_uses_4kn_sector_geometry(tmp_path: Path, monkeypatch):
+    import pytsk3
+
+    from ntfsdump.formats.vhd import VHDHandler
+    from ntfsdump.image import ImageFile
+
+    path = tmp_path / '4kn.vhdx'
+    make_vhdx(
+        path, uuid.uuid4(), False, logical_sector_size=4096, mbr_4kn=True
+    )
+    native = VHDHandler().get_img_info(str(path))
+    try:
+        table = pytsk3.Volume_Info(native)
+        assert table.info.block_size == 4096
+        partition = next(p for p in table if p.flags == pytsk3.TSK_VS_PART_FLAG_ALLOC)
+        assert (partition.start, partition.len) == (256, 768)
+    finally:
+        native.close()
+
+    offsets = []
+    monkeypatch.setattr(
+        pytsk3,
+        'FS_Info',
+        lambda image, offset, fs_type: offsets.append(offset) or object(),
+    )
+    image = ImageFile(path, volume=2)
+    try:
+        assert image.block_size == 4096
+        assert offsets == [256 * 4096]
+    finally:
+        image.img_info.close()

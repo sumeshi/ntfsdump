@@ -8,8 +8,7 @@ from ntfsdump.formats.e01 import E01Handler
 from ntfsdump.formats.vhd import VHDHandler
 from ntfsdump.formats.vmdk import VMDKHandler
 
-
-VALID_IMAGE_FORMATS = ('raw', 'e01', 'vhd', 'vhdx', 'vmdk')
+VALID_IMAGE_FORMATS = ("raw", "e01", "vhd", "vhdx", "vmdk")
 
 
 def get_format_handler(file_type: str) -> FormatHandler:
@@ -18,14 +17,14 @@ def get_format_handler(file_type: str) -> FormatHandler:
     Unknown formats raise instead of silently falling back to RawHandler.
     """
     handlers: Dict[str, Type[FormatHandler]] = {
-        'raw': RawHandler,
-        'e01': E01Handler,
-        'vhd': VHDHandler,
-        'vhdx': VHDHandler,
-        'vmdk': VMDKHandler,
+        "raw": RawHandler,
+        "e01": E01Handler,
+        "vhd": VHDHandler,
+        "vhdx": VHDHandler,
+        "vmdk": VMDKHandler,
     }
 
-    handler_cls = handlers.get((file_type or '').lower())
+    handler_cls = handlers.get((file_type or "").lower())
     if handler_cls is None:
         raise NtfsDumpError(f"Unknown image format: {file_type}")
     return handler_cls()
