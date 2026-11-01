@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 import pytest
@@ -73,8 +72,9 @@ def test_existing_unrelated_log_is_appended(tmp_path):
 
 
 @pytest.mark.parametrize("alias", ["same", "symlink", "hardlink"])
-def test_cli_log_cannot_modify_extracted_file_or_alias(tmp_path, alias):
-    fixture = json.loads(Path("/workspace/.review-fixtures/manifest.json").read_text())
+def test_cli_log_cannot_modify_extracted_file_or_alias(
+    prepare_ntfsfile, tmp_path, alias, capsys
+):
     output = tmp_path / "stream.bin"
     output.write_bytes(b"preserve this")
     log = output
@@ -88,8 +88,8 @@ def test_cli_log_cannot_modify_extracted_file_or_alias(tmp_path, alias):
     assert (
         main(
             [
-                fixture["directory_ads"],
-                "/test_dir:review",
+                str(prepare_ntfsfile),
+                "/test_dir/file_1.txt",
                 "--quiet",
                 "--output-file",
                 "-o",
@@ -100,20 +100,28 @@ def test_cli_log_cannot_modify_extracted_file_or_alias(tmp_path, alias):
         )
         == 1
     )
+    assert "Log output would overwrite an extracted file" in capsys.readouterr().err
     assert output.read_bytes() == b"preserve this"
 
 
-def test_cli_failure_is_appended_to_enabled_log(tmp_path, capsys):
-    fixture = json.loads(Path("/workspace/.review-fixtures/manifest.json").read_text())
+def test_cli_failure_is_appended_to_enabled_log(prepare_ntfsfile, tmp_path, capsys):
     log = tmp_path / "case.log"
 
     assert (
-        main([fixture["directory_ads"], "/missing-path", "--quiet", "--log", str(log)])
+        main(
+            [
+                str(prepare_ntfsfile),
+                "/ntfsdump-missing-file-for-logger-test",
+                "--quiet",
+                "--log",
+                str(log),
+            ]
+        )
         == 1
     )
 
     captured = capsys.readouterr()
     assert "Query path was not found" in captured.err
     contents = log.read_text()
-    assert "[query] /missing-path" in contents
+    assert "[query] /ntfsdump-missing-file-for-logger-test" in contents
     assert "[error] Query path was not found" in contents
